@@ -1,4 +1,4 @@
-# bot/creator_handlers_fixed.py
+# bot/creator_handlers.py
 from aiogram import Router, F
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.filters import Command
@@ -8,7 +8,6 @@ from database import (add_creator, get_creator_by_id, get_all_creators, get_crea
                      get_user_balance, withdraw_balance, add_ppv_content, is_user_banned)
 from dotenv import load_dotenv
 import os
-import time
 
 load_dotenv()
 
@@ -31,6 +30,7 @@ async def start_creator_registration(message: Message, state: FSMContext):
         await message.answer("❌ Tu cuenta está baneada y no puedes registrarte como creador.")
         return
     
+    # Verificar si ya es creador
     creator = get_creator_by_id(message.from_user.id)
     if creator:
         await message.answer("✅ Ya estás registrado como creador. Usa /mi_perfil para ver tu información.")
@@ -108,6 +108,7 @@ async def process_payout_method(callback: CallbackQuery, state: FSMContext):
     payout_method = "Stars" if callback.data == "payout_stars" else "Real"
     await state.update_data(payout_method=payout_method)
     
+    # Obtener todos los datos y registrar al creador
     data = await state.get_data()
     
     try:
@@ -151,17 +152,17 @@ async def explore_creators(message: Message):
     
     text = "🌟 <b>CREADORES DISPONIBLES</b>\n\n"
     
-    for creator in creators[:10]:
+    for creator in creators[:10]:  # Mostrar máximo 10
         user_id, username, display_name, description, subscription_price, photo_url, payout_method, balance, created_at = creator[1:10]
         
-        text += f"👤 <b>{display_name}</b>\n"
+        text += f"👤 **{display_name}**\n"
         text += f"📝 {description}\n"
         text += f"💰 Suscripción: {subscription_price} ⭐️\n"
-        text += f"🆔 ID: <code>{user_id}</code>\n\n"
-        text += f"💫 Para suscribirte: <code>/suscribirme_a {user_id}</code>\n"
+        text += f"🆔 ID: `{user_id}`\n\n"
+        text += f"💫 Para suscribirte: `/suscribirme_a {user_id}`\n"
         text += "━━━━━━━━━━━━━━━━━━━━\n\n"
     
-    await message.answer(text)
+    await message.answer(text, parse_mode="Markdown")
 
 @router.message(Command("mi_perfil"))
 async def my_profile(message: Message):
@@ -196,9 +197,9 @@ async def my_profile(message: Message):
     text += f"• /crear_contenido_ppv - Crear contenido PPV"
     
     if photo_url:
-        await message.answer_photo(photo=photo_url, caption=text)
+        await message.answer_photo(photo=photo_url, caption=text, parse_mode="Markdown")
     else:
-        await message.answer(text)
+        await message.answer(text, parse_mode="Markdown")
 
 @router.message(Command("balance"))
 async def check_balance(message: Message):
@@ -222,11 +223,11 @@ async def check_balance(message: Message):
     text += f"💡 Retiro mínimo: {min_withdrawal} ⭐️\n\n"
     
     if balance_stars >= min_withdrawal:
-        text += f"✅ Puedes retirar usando: <code>/retirar {balance_stars}</code>"
+        text += f"✅ Puedes retirar usando: `/retirar {balance_stars}`"
     else:
         text += f"❌ Necesitas al menos {min_withdrawal - balance_stars} ⭐️ más para retirar"
     
-    await message.answer(text)
+    await message.answer(text, parse_mode="Markdown")
 
 @router.message(Command("retirar"))
 async def withdraw(message: Message):
@@ -264,7 +265,7 @@ async def withdraw(message: Message):
     if withdraw_balance(message.from_user.id, amount):
         amount_usd = amount * float(os.getenv("EXCHANGE_RATE", 0.013))
         await message.answer(
-            f"✅ <b>Retiro procesado exitosamente</b>\n\n"
+            f"✅ **Retiro procesado exitosamente**\n\n"
             f"💰 Monto retirado: {amount} ⭐️\n"
             f"💵 Equivalente: ${amount_usd:.2f}\n"
             f"💎 Balance restante: {current_balance - amount} ⭐️\n\n"
@@ -285,7 +286,7 @@ async def create_ppv_content(message: Message, state: FSMContext):
         return
     
     await message.answer(
-        "📸 <b>CREAR CONTENIDO PPV</b>\n\n"
+        "📸 **CREAR CONTENIDO PPV**\n\n"
         "Envía la foto o video que quieres vender:"
     )
     await state.set_state(PPVCreation.waiting_for_content)
@@ -331,11 +332,13 @@ async def process_ppv_price(message: Message, state: FSMContext):
     )
     
     await message.answer(
-        f"✅ <b>Contenido PPV creado exitosamente</b>\n\n"
-        f"🆔 ID del contenido: <code>{content_id}</code>\n"
+        f"✅ **Contenido PPV creado exitosamente**\n\n"
+        f"🆔 ID del contenido: `{content_id}`\n"
         f"💰 Precio: {price} ⭐️\n\n"
         f"🔗 Los fans pueden comprarlo con:\n"
-        f"<code>/comprar_ppv {content_id}</code>"
+        f"`/comprar_ppv {content_id}`"
     )
     
     await state.clear()
+
+import time

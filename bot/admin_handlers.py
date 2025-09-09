@@ -24,17 +24,17 @@ async def admin_panel(message: Message):
     total_creators, total_transactions, total_commission = get_admin_stats()
     commission_usd = total_commission * float(os.getenv("EXCHANGE_RATE", 0.013))
     
-    text = f"👑 **PANEL DE ADMINISTRADOR**\n\n"
-    text += f"📊 **Estadísticas de la plataforma:**\n"
+    text = f"👑 <b>PANEL DE ADMINISTRADOR</b>\n\n"
+    text += f"📊 <b>Estadísticas de la plataforma:</b>\n"
     text += f"👥 Total de creadores: {total_creators}\n"
     text += f"💳 Total de transacciones: {total_transactions}\n"
     text += f"💰 Comisión acumulada: {total_commission} ⭐️\n"
     text += f"💵 Comisión en USD: ${commission_usd:.2f}\n\n"
-    text += f"🔧 **Comandos disponibles:**\n"
-    text += f"• `/banear_usuario <ID>` - Banear usuario\n"
-    text += f"• `/stats` - Ver estadísticas detalladas"
+    text += f"🔧 <b>Comandos disponibles:</b>\n"
+    text += f"• <code>/banear_usuario &lt;ID&gt;</code> - Banear usuario\n"
+    text += f"• <code>/stats</code> - Ver estadísticas detalladas"
     
-    await message.answer(text, parse_mode="Markdown")
+    await message.answer(text)
 
 @router.message(Command("banear_usuario"))
 async def ban_user_command(message: Message):
@@ -44,7 +44,7 @@ async def ban_user_command(message: Message):
     
     args = message.text.split()
     if len(args) < 2:
-        await message.answer("❌ Uso: /banear_usuario <ID_de_usuario>\nEjemplo: /banear_usuario 123456789")
+        await message.answer("❌ Uso: /banear_usuario &lt;ID_de_usuario&gt;\nEjemplo: /banear_usuario 123456789")
         return
     
     try:
@@ -69,7 +69,7 @@ async def detailed_stats(message: Message):
     total_creators, total_transactions, total_commission = get_admin_stats()
     commission_usd = total_commission * float(os.getenv("EXCHANGE_RATE", 0.013))
     
-    text = f"📈 **ESTADÍSTICAS DETALLADAS**\n\n"
+    text = f"📈 <b>ESTADÍSTICAS DETALLADAS</b>\n\n"
     text += f"👥 Creadores registrados: {total_creators}\n"
     text += f"💳 Transacciones totales: {total_transactions}\n"
     text += f"⭐️ Comisión total: {total_commission} Stars\n"
@@ -77,4 +77,4 @@ async def detailed_stats(message: Message):
     text += f"📊 Comisión por transacción: {os.getenv('COMMISSION_PERCENTAGE', 20)}%\n"
     text += f"💎 Tasa de cambio: ${os.getenv('EXCHANGE_RATE', 0.013)} por Star"
     
-    await message.answer(text, parse_mode="Markdown")
+    await message.answer(text)

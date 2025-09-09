@@ -21,7 +21,7 @@ async def buy_ppv_content(message: Message):
     
     args = message.text.split()
     if len(args) < 2:
-        await message.answer("❌ Uso: /comprar_ppv <ID_del_contenido>\nEjemplo: /comprar_ppv 123")
+        await message.answer("❌ Uso: /comprar_ppv &lt;ID_del_contenido&gt;\nEjemplo: /comprar_ppv 123")
         return
     
     try:
@@ -78,7 +78,7 @@ async def send_tip(message: Message):
     args = message.text.split()
     if len(args) < 3:
         await message.answer(
-            "❌ Uso: /enviar_propina <ID_creador> <monto>\n"
+            "❌ Uso: /enviar_propina &lt;ID_creador&gt; &lt;monto&gt;\n"
             "Ejemplo: /enviar_propina 123456789 50"
         )
         return
