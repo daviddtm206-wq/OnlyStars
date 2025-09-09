@@ -2,7 +2,7 @@
 from aiogram import Router, F
 from aiogram.types import Message, PreCheckoutQuery, LabeledPrice
 from aiogram.filters import Command
-from .database import add_transaction, update_balance, add_subscriber, get_creator_by_id
+from database import add_transaction, update_balance, add_subscriber, get_creator_by_id
 import asyncio
 import time
 from dotenv import load_dotenv

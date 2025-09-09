@@ -2,8 +2,8 @@
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import Command
-from .database import init_db
-from .payments import router as payments_router
+from database import init_db
+from payments import router as payments_router
 
 router = Router()
 
