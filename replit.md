@@ -11,6 +11,7 @@ This is a Telegram bot that allows creators to sell exclusive content using Tele
 - Implemented complete feature set: creator registration, PPV content, tips, admin panel
 - Added FSM (Finite State Machine) for interactive flows
 - Enhanced payment system to handle subscriptions, PPV, and tips
+- **NEW**: Added profile editing functionality for creators with /editar_perfil command
 
 ## Project Architecture
 - **Language**: Python 3.11
@@ -70,6 +71,7 @@ requirements.txt         # Python dependencies
 ### For Creators:
 - `/convertirme_en_creador` - Interactive creator registration
 - `/mi_perfil` - View profile and statistics
+- `/editar_perfil` - Edit profile information (name, description, price, photo)
 - `/balance` - Check balance and withdrawal options
 - `/retirar <amount>` - Withdraw earnings
 - `/crear_contenido_ppv` - Create pay-per-view content
