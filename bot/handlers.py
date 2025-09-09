@@ -19,40 +19,40 @@ router.include_router(ppv_router)
 @router.message(Command("start"))
 async def cmd_start(message: Message):
     await message.answer(
-        "🌟 **¡Bienvenido a OnlyStars!** ⭐️\n\n"
+        "🌟 <b>¡Bienvenido a OnlyStars!</b> ⭐️\n\n"
         "La primera plataforma de contenido exclusivo usando Telegram Stars\n\n"
-        "👥 **Para Fans:**\n"
+        "👥 <b>Para Fans:</b>\n"
         "• /explorar_creadores - Ver creadores disponibles\n"
-        "• /suscribirme_a <ID> - Suscribirse a un creador\n"
-        "• /enviar_propina <ID> <monto> - Enviar propina\n"
-        "• /comprar_ppv <ID> - Comprar contenido PPV\n\n"
-        "🎨 **Para Creadores:**\n"
+        "• /suscribirme_a &lt;ID&gt; - Suscribirse a un creador\n"
+        "• /enviar_propina &lt;ID&gt; &lt;monto&gt; - Enviar propina\n"
+        "• /comprar_ppv &lt;ID&gt; - Comprar contenido PPV\n\n"
+        "🎨 <b>Para Creadores:</b>\n"
         "• /convertirme_en_creador - Registrarse como creador\n"
         "• /mi_perfil - Ver mi perfil y estadísticas\n"
         "• /balance - Ver balance y retirar ganancias\n"
         "• /crear_contenido_ppv - Crear contenido pago por ver\n\n"
-        "💎 **Pagos seguros con Telegram Stars** ⭐️"
+        "💎 <b>Pagos seguros con Telegram Stars</b> ⭐️"
     )
 
 @router.message(Command("help"))
 async def cmd_help(message: Message):
     await message.answer(
-        "🤖 **COMANDOS DISPONIBLES**\n\n"
-        "👥 **Para todos:**\n"
+        "🤖 <b>COMANDOS DISPONIBLES</b>\n\n"
+        "👥 <b>Para todos:</b>\n"
         "• /start - Mensaje de bienvenida\n"
         "• /help - Esta ayuda\n\n"
-        "🎨 **Para creadores:**\n"
+        "🎨 <b>Para creadores:</b>\n"
         "• /convertirme_en_creador - Registrarse\n"
         "• /mi_perfil - Ver perfil\n"
         "• /balance - Ver saldo\n"
-        "• /retirar <monto> - Retirar ganancias\n"
+        "• /retirar &lt;monto&gt; - Retirar ganancias\n"
         "• /crear_contenido_ppv - Crear contenido PPV\n\n"
-        "👥 **Para fans:**\n"
+        "👥 <b>Para fans:</b>\n"
         "• /explorar_creadores - Ver creadores\n"
-        "• /suscribirme_a <ID> - Suscribirse\n"
-        "• /comprar_ppv <ID> - Comprar contenido\n"
-        "• /enviar_propina <ID> <monto> - Enviar propina\n\n"
-        "⚡️ **Powered by Telegram Stars** ⭐️"
+        "• /suscribirme_a &lt;ID&gt; - Suscribirse\n"
+        "• /comprar_ppv &lt;ID&gt; - Comprar contenido\n"
+        "• /enviar_propina &lt;ID&gt; &lt;monto&gt; - Enviar propina\n\n"
+        "⚡️ <b>Powered by Telegram Stars</b> ⭐️"
     )
 
 # Inicializar base de datos al cargar
