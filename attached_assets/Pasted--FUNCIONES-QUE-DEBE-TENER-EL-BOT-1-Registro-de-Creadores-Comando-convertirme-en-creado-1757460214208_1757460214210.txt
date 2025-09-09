@@ -1,0 +1,89 @@
+✅ FUNCIONES QUE DEBE TENER EL BOT
+
+### 1. Registro de Creadores
+- Comando: /convertirme_en_creador
+- Flujo interactivo paso a paso:
+  1. Pide nombre artístico.
+  2. Pide descripción (máx. 200 caracteres).
+  3. Pide precio de suscripción mensual (en ⭐️).
+  4. Pide foto de perfil (opcional).
+  5. Pide método de retiro (Stars o dinero real).
+- Guarda en SQLite: user_id, username, display_name, description, subscription_price, photo_url, payout_method, balance_stars.
+
+---
+
+### 2. Explorar Creadores
+- Comando: /explorar_creadores
+- Muestra lista de creadores con:
+  - Nombre artístico
+  - Descripción
+  - Precio de suscripción
+  - Botón “Suscribirse”
+
+---
+
+### 3. Suscripción con Telegram Stars (⭐️)
+- Comando: /suscribirme_a <ID_creador>
+- Envía factura de Telegram Stars por el precio de suscripción.
+- Si el pago es exitoso:
+  - Registra al fan como suscriptor (30 días).
+  - Añade transacción: monto, comisión (20%), tipo = “subscription”.
+  - Actualiza balance del creador (80% del pago).
+  - Envía mensaje de confirmación.
+
+---
+
+### 4. Contenido PPV (Pago por Ver)
+- Comando para creadores: /crear_contenido_ppv
+- Flujo:
+  1. Sube foto/video.
+  2. Pone precio en ⭐️.
+  3. Genera enlace único de pago.
+- Fans compran con: /comprar_ppv <ID_contenido>
+- Registro de transacción y actualización de balances.
+
+---
+
+### 5. Propinas
+- Comando: /enviar_propina <ID_creador> <monto>
+- Envía factura de Stars por el monto indicado.
+- Registra transacción y actualiza balance del creador.
+
+---
+
+### 6. Panel de Creador
+- Comando: /mi_perfil
+- Muestra:
+  - Nombre, descripción, precio de suscripción.
+  - Balance actual en ⭐️ y USD.
+  - Número de suscriptores.
+  - Opción para editar perfil.
+- Comando: /balance → muestra saldo y opción de retiro.
+- Comando: /retirar <monto> → simula retiro (registra en DB).
+
+---
+
+### 7. Panel de Administrador
+- Comando: /admin_panel (solo para ADMIN_USERNAME)
+- Muestra:
+  - Total de creadores.
+  - Total de transacciones.
+  - Comisión acumulada (20% de todas las ventas).
+  - Opción para retirar comisiones.
+- Comando: /banear_usuario <ID> → banea usuario.
+
+---
+
+### 8. Base de Datos SQLite
+Tablas:
+- creators → info de creadores.
+- transactions → pagos, comisiones, tipos.
+- subscribers → fans activos, fecha de expiración.
+
+---
+
+### 9. Sistema de Pagos con Telegram Stars
+- Moneda: XTR
+- Proveedor: "" (vacío, para usar Stars nativos).
+- Comisión automática: 20% para la plataforma.
+- Conversión automática: 1 ⭐️ = $0.013 (configurable).
