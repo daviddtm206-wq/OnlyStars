@@ -133,6 +133,34 @@ def update_balance(user_id, stars):
     conn.commit()
     conn.close()
 
+def update_creator_display_name(user_id, display_name):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE creators SET display_name = ? WHERE user_id = ?", (display_name, user_id))
+    conn.commit()
+    conn.close()
+
+def update_creator_description(user_id, description):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE creators SET description = ? WHERE user_id = ?", (description, user_id))
+    conn.commit()
+    conn.close()
+
+def update_creator_subscription_price(user_id, price):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE creators SET subscription_price = ? WHERE user_id = ?", (price, user_id))
+    conn.commit()
+    conn.close()
+
+def update_creator_photo(user_id, photo_url):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE creators SET photo_url = ? WHERE user_id = ?", (photo_url, user_id))
+    conn.commit()
+    conn.close()
+
 def get_all_creators():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()

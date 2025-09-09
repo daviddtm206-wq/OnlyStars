@@ -5,7 +5,9 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from database import (add_creator, get_creator_by_id, get_all_creators, get_creator_stats, 
-                     get_user_balance, withdraw_balance, add_ppv_content, is_user_banned)
+                     get_user_balance, withdraw_balance, add_ppv_content, is_user_banned,
+                     update_creator_display_name, update_creator_description, 
+                     update_creator_subscription_price, update_creator_photo)
 from dotenv import load_dotenv
 import os
 import time
@@ -24,6 +26,12 @@ class CreatorRegistration(StatesGroup):
 class PPVCreation(StatesGroup):
     waiting_for_content = State()
     waiting_for_price = State()
+
+class ProfileEdit(StatesGroup):
+    waiting_for_new_name = State()
+    waiting_for_new_description = State()
+    waiting_for_new_price = State()
+    waiting_for_new_photo = State()
 
 @router.message(Command("convertirme_en_creador"))
 async def start_creator_registration(message: Message, state: FSMContext):
@@ -193,7 +201,8 @@ async def my_profile(message: Message):
     text += f"🔧 Comandos disponibles:\n"
     text += f"• /balance - Ver saldo detallado\n"
     text += f"• /retirar &lt;monto&gt; - Retirar ganancias\n"
-    text += f"• /crear_contenido_ppv - Crear contenido PPV"
+    text += f"• /crear_contenido_ppv - Crear contenido PPV\n"
+    text += f"• /editar_perfil - Editar información del perfil"
     
     if photo_url:
         await message.answer_photo(photo=photo_url, caption=text)
@@ -338,4 +347,145 @@ async def process_ppv_price(message: Message, state: FSMContext):
         f"<code>/comprar_ppv {content_id}</code>"
     )
     
+    await state.clear()
+
+@router.message(Command("editar_perfil"))
+async def edit_profile_menu(message: Message):
+    if is_user_banned(message.from_user.id):
+        await message.answer("❌ Tu cuenta está baneada.")
+        return
+    
+    creator = get_creator_by_id(message.from_user.id)
+    if not creator:
+        await message.answer("❌ No estás registrado como creador.")
+        return
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎨 Cambiar nombre artístico", callback_data="edit_name")],
+        [InlineKeyboardButton(text="📝 Cambiar descripción", callback_data="edit_description")],
+        [InlineKeyboardButton(text="💰 Cambiar precio de suscripción", callback_data="edit_price")],
+        [InlineKeyboardButton(text="📸 Cambiar foto de perfil", callback_data="edit_photo")],
+        [InlineKeyboardButton(text="❌ Cancelar", callback_data="cancel_edit")]
+    ])
+    
+    await message.answer(
+        "🔧 <b>EDITAR PERFIL</b>\n\n"
+        "¿Qué deseas modificar en tu perfil?",
+        reply_markup=keyboard
+    )
+
+@router.callback_query(F.data == "edit_name")
+async def edit_name_start(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        "🎨 <b>CAMBIAR NOMBRE ARTÍSTICO</b>\n\n"
+        "Escribe tu nuevo nombre artístico:"
+    )
+    await state.set_state(ProfileEdit.waiting_for_new_name)
+
+@router.message(ProfileEdit.waiting_for_new_name)
+async def process_new_name(message: Message, state: FSMContext):
+    if len(message.text) > 50:
+        await message.answer("❌ El nombre es muy largo. Máximo 50 caracteres. Inténtalo de nuevo:")
+        return
+    
+    update_creator_display_name(message.from_user.id, message.text)
+    
+    await message.answer(
+        f"✅ <b>Nombre artístico actualizado</b>\n\n"
+        f"🎨 Nuevo nombre: {message.text}\n\n"
+        f"Puedes ver tu perfil actualizado con /mi_perfil"
+    )
+    await state.clear()
+
+@router.callback_query(F.data == "edit_description")
+async def edit_description_start(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        "📝 <b>CAMBIAR DESCRIPCIÓN</b>\n\n"
+        "Escribe tu nueva descripción (máximo 200 caracteres):"
+    )
+    await state.set_state(ProfileEdit.waiting_for_new_description)
+
+@router.message(ProfileEdit.waiting_for_new_description)
+async def process_new_description(message: Message, state: FSMContext):
+    if len(message.text) > 200:
+        await message.answer("❌ La descripción es muy larga. Máximo 200 caracteres. Inténtalo de nuevo:")
+        return
+    
+    update_creator_description(message.from_user.id, message.text)
+    
+    await message.answer(
+        f"✅ <b>Descripción actualizada</b>\n\n"
+        f"📝 Nueva descripción: {message.text}\n\n"
+        f"Puedes ver tu perfil actualizado con /mi_perfil"
+    )
+    await state.clear()
+
+@router.callback_query(F.data == "edit_price")
+async def edit_price_start(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        "💰 <b>CAMBIAR PRECIO DE SUSCRIPCIÓN</b>\n\n"
+        "Escribe el nuevo precio mensual en ⭐️ Stars:\n"
+        "Ejemplo: 150"
+    )
+    await state.set_state(ProfileEdit.waiting_for_new_price)
+
+@router.message(ProfileEdit.waiting_for_new_price)
+async def process_new_price(message: Message, state: FSMContext):
+    try:
+        price = int(message.text)
+        if price <= 0:
+            raise ValueError
+    except ValueError:
+        await message.answer("❌ Por favor ingresa un número válido mayor a 0:")
+        return
+    
+    update_creator_subscription_price(message.from_user.id, price)
+    
+    await message.answer(
+        f"✅ <b>Precio de suscripción actualizado</b>\n\n"
+        f"💰 Nuevo precio: {price} ⭐️\n\n"
+        f"Los nuevos suscriptores pagarán este precio.\n"
+        f"Puedes ver tu perfil actualizado con /mi_perfil"
+    )
+    await state.clear()
+
+@router.callback_query(F.data == "edit_photo")
+async def edit_photo_start(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        "📸 <b>CAMBIAR FOTO DE PERFIL</b>\n\n"
+        "Envía tu nueva foto de perfil o escribe 'quitar' para eliminar la foto actual:"
+    )
+    await state.set_state(ProfileEdit.waiting_for_new_photo)
+
+@router.message(ProfileEdit.waiting_for_new_photo)
+async def process_new_photo(message: Message, state: FSMContext):
+    photo_url = None
+    
+    if message.photo:
+        photo_url = message.photo[-1].file_id
+        update_creator_photo(message.from_user.id, photo_url)
+        await message.answer(
+            "✅ <b>Foto de perfil actualizada</b>\n\n"
+            "📸 Tu nueva foto de perfil ha sido guardada.\n"
+            "Puedes ver tu perfil actualizado con /mi_perfil"
+        )
+    elif message.text and message.text.lower() == 'quitar':
+        update_creator_photo(message.from_user.id, None)
+        await message.answer(
+            "✅ <b>Foto de perfil eliminada</b>\n\n"
+            "📸 Has eliminado tu foto de perfil.\n"
+            "Puedes ver tu perfil actualizado con /mi_perfil"
+        )
+    else:
+        await message.answer("❌ Por favor envía una imagen o escribe 'quitar':")
+        return
+    
+    await state.clear()
+
+@router.callback_query(F.data == "cancel_edit")
+async def cancel_edit(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        "❌ <b>Edición cancelada</b>\n\n"
+        "No se realizaron cambios en tu perfil."
+    )
     await state.clear()
