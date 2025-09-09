@@ -8,6 +8,9 @@ This is a Telegram bot that allows creators to sell exclusive content using Tele
 - Fixed import issues for proper module resolution
 - Integrated payment router with main handlers
 - Configured deployment for VM target (always-on bot)
+- Implemented complete feature set: creator registration, PPV content, tips, admin panel
+- Added FSM (Finite State Machine) for interactive flows
+- Enhanced payment system to handle subscriptions, PPV, and tips
 
 ## Project Architecture
 - **Language**: Python 3.11
@@ -18,22 +21,29 @@ This is a Telegram bot that allows creators to sell exclusive content using Tele
 ### File Structure
 ```
 bot/
-├── main.py           # Bot entry point and configuration
-├── handlers.py       # Main command handlers (start, etc.)
-├── payments.py       # Payment processing with Telegram Stars
-├── database.py       # SQLite database operations
-└── __init__.py       # Package initialization
+├── main.py              # Bot entry point with FSM storage
+├── handlers.py          # Main command handlers (start, help)
+├── payments.py          # Payment processing (subscriptions, PPV, tips)
+├── creator_handlers.py  # Creator registration and management
+├── admin_handlers.py    # Administrator functions
+├── ppv_handlers.py      # Pay-per-view content handlers
+├── database.py          # SQLite database operations
+└── __init__.py          # Package initialization
 
-.env                  # Environment variables (bot token, admin, etc.)
-requirements.txt      # Python dependencies
+.env                     # Environment variables
+requirements.txt         # Python dependencies
 ```
 
 ### Key Features
-- Monthly subscriptions using Telegram Stars
-- Payment processing with automatic commission calculation (20%)
-- SQLite database for user data and transactions
-- Admin functionality
-- Support for creators and subscribers
+- **Creator Registration**: Interactive flow for creator onboarding
+- **Monthly Subscriptions**: Using Telegram Stars with automatic billing
+- **PPV Content**: Pay-per-view photos and videos
+- **Tips System**: Direct tips to creators
+- **Admin Panel**: Full administrative controls and statistics
+- **Payment Processing**: Automatic commission calculation (20%)
+- **User Management**: Ban system and user verification
+- **Database**: SQLite with tables for creators, transactions, subscribers, PPV content
+- **FSM Support**: Interactive conversational flows
 
 ### Environment Configuration
 - BOT_TOKEN: Telegram bot token from BotFather
@@ -51,7 +61,28 @@ requirements.txt      # Python dependencies
 ✅ Payment system integrated
 ✅ Deployment configured for production
 
-The bot is ready for use and can handle:
-- /start command for welcome message
-- /suscribirme_a <creator_id> for subscriptions
-- Payment processing through Telegram Stars
+## Available Commands
+
+### For Everyone:
+- `/start` - Welcome message and command overview
+- `/help` - Complete command list
+
+### For Creators:
+- `/convertirme_en_creador` - Interactive creator registration
+- `/mi_perfil` - View profile and statistics
+- `/balance` - Check balance and withdrawal options
+- `/retirar <amount>` - Withdraw earnings
+- `/crear_contenido_ppv` - Create pay-per-view content
+
+### For Fans:
+- `/explorar_creadores` - Browse available creators
+- `/suscribirme_a <creator_id>` - Subscribe to a creator
+- `/comprar_ppv <content_id>` - Purchase PPV content
+- `/enviar_propina <creator_id> <amount>` - Send tips
+
+### For Admins:
+- `/admin_panel` - View platform statistics
+- `/banear_usuario <user_id>` - Ban users
+- `/stats` - Detailed platform analytics
+
+The bot handles all payment processing automatically using Telegram Stars with 20% platform commission.
