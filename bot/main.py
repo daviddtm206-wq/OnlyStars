@@ -4,7 +4,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
-from handlers import router
+from .handlers import router
 
 from dotenv import load_dotenv
 import os

@@ -2,9 +2,13 @@
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import Command
-from database import init_db
+from .database import init_db
+from .payments import router as payments_router
 
 router = Router()
+
+# Include payment handling
+router.include_router(payments_router)
 
 @router.message(Command("start"))
 async def cmd_start(message: Message):
