@@ -6,6 +6,7 @@ from database import (get_ppv_content, has_purchased_ppv, add_ppv_purchase,
                      add_transaction, update_balance, is_user_banned, get_ppv_album_items, get_creator_by_id)
 from dotenv import load_dotenv
 import os
+import math
 
 load_dotenv()
 
@@ -118,8 +119,9 @@ async def send_tip(message: Message):
         await message.answer("❌ ID del creador y monto deben ser números válidos.")
         return
     
-    if amount <= 0:
-        await message.answer("❌ El monto debe ser mayor a 0.")
+    # CRÍTICO: Mínimo de 5⭐ para evitar evasión de comisión con micro-propinas
+    if amount < 5:
+        await message.answer("❌ El monto mínimo para propinas es 5 ⭐️.")
         return
     
     # Verificar que el creador existe
@@ -269,7 +271,8 @@ async def process_successful_payment(message: Message):
         else:
             # Nueva compra: procesar pago completo
             # Calcular comisión y ganancia del creador
-            commission = (amount_stars * COMMISSION_PERCENTAGE) // 100
+            # CRÍTICO: Asegurar comisión mínima para evitar fuga en montos pequeños
+            commission = max(1, math.ceil(amount_stars * COMMISSION_PERCENTAGE / 100)) if amount_stars > 0 else 0
             creator_earnings = amount_stars - commission
             
             # Actualizar balance del creador
@@ -335,7 +338,8 @@ async def process_successful_payment(message: Message):
         creator_name = creator[3]  # display_name
         
         # Calcular comisión y ganancia del creador
-        commission = (amount_stars * COMMISSION_PERCENTAGE) // 100
+        # CRÍTICO: Asegurar comisión mínima para evitar fuga en montos pequeños
+        commission = max(1, math.ceil(amount_stars * COMMISSION_PERCENTAGE / 100)) if amount_stars > 0 else 0
         creator_earnings = amount_stars - commission
         
         # Actualizar balance del creador

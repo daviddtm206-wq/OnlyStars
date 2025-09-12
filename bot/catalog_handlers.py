@@ -10,6 +10,7 @@ from database import (get_creator_by_id, is_user_banned, get_active_subscription
                      add_ppv_purchase, add_transaction, update_balance)
 import time
 import os
+import math
 
 COMMISSION_PERCENTAGE = int(os.getenv("COMMISSION_PERCENTAGE", 20))
 
@@ -38,7 +39,8 @@ async def process_paid_media_purchase(message: Message):
                 purchase_added = add_ppv_purchase(message.from_user.id, content_id)
                 if purchase_added:
                     # Calcular comisión y ganancia del creador
-                    commission = (price_stars * COMMISSION_PERCENTAGE) // 100
+                    # CRÍTICO: Asegurar comisión mínima para evitar fuga en montos pequeños
+                    commission = max(1, math.ceil(price_stars * COMMISSION_PERCENTAGE / 100)) if price_stars > 0 else 0
                     creator_earnings = price_stars - commission
                     
                     # Actualizar balance del creador
@@ -313,7 +315,8 @@ async def send_paid_content_individual(callback: CallbackQuery, paid_content: li
                     'creator_id': content[1],  # creator_id
                     'buyer_id': callback.from_user.id,
                     'price_stars': price_stars,
-                    'album_type': album_type
+                    'album_type': album_type,
+                    'timestamp': time.time()  # CRÍTICO: Timestamp para correlación segura
                 }
                 
     except ImportError:

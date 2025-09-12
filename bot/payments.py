@@ -6,6 +6,7 @@ from database import (add_transaction, update_balance, add_subscriber, get_creat
                      is_user_banned, get_ppv_content, add_ppv_purchase)
 import asyncio
 import time
+import math
 from dotenv import load_dotenv
 import os
 
@@ -115,10 +116,11 @@ async def handle_subscription_payment(message, parts, amount_stars, payer_id):
         await message.answer("❌ Error: ID de pagador no coincide.")
         return
     
-    commission_stars = int(amount_stars * COMMISSION_PERCENTAGE / 100)
+    # CRÍTICO: Asegurar comisión mínima para evitar fuga en montos pequeños
+    commission_stars = max(1, math.ceil(amount_stars * COMMISSION_PERCENTAGE / 100)) if amount_stars > 0 else 0
     creator_earnings = amount_stars - commission_stars
     
-    add_transaction(payer_id, creator_id, creator_earnings, commission_stars, "subscription")
+    add_transaction(payer_id, creator_id, amount_stars, commission_stars, "subscription")
     update_balance(creator_id, creator_earnings)
     
     expires_at = int(time.time()) + 30 * 24 * 60 * 60
