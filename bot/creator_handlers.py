@@ -26,6 +26,7 @@ class CreatorRegistration(StatesGroup):
 class PPVCreation(StatesGroup):
     waiting_for_content = State()
     waiting_for_price = State()
+    waiting_for_description = State()
 
 class ProfileEdit(StatesGroup):
     waiting_for_new_name = State()
@@ -329,21 +330,43 @@ async def process_ppv_price(message: Message, state: FSMContext):
         await message.answer("❌ Por favor ingresa un precio válido mayor a 0:")
         return
     
+    await state.update_data(price=price)
+    await message.answer(
+        "📝 <b>Descripción opcional</b>\n\n"
+        "Escribe una descripción personalizada para tu contenido o envía /saltar para omitir:\n\n"
+        "Ejemplo: 'Mi nuevo set de fotos en lencería roja 🔥'"
+    )
+    await state.set_state(PPVCreation.waiting_for_description)
+
+@router.message(PPVCreation.waiting_for_description)
+async def process_ppv_description(message: Message, state: FSMContext):
     data = await state.get_data()
+    
+    # Si el usuario envía /saltar, usar descripción vacía
+    if message.text and message.text.lower() == '/saltar':
+        description = ""
+    else:
+        description = message.text or ""
     
     content_id = add_ppv_content(
         creator_id=message.from_user.id,
         title=f"Contenido PPV #{int(time.time())}",
-        description="Contenido exclusivo",
-        price_stars=price,
+        description=description,
+        price_stars=data['price'],
         file_id=data['file_id'],
         file_type=data['file_type']
     )
     
+    if description:
+        desc_preview = f"📝 Descripción: {description[:50]}{'...' if len(description) > 50 else ''}\n"
+    else:
+        desc_preview = "📝 Sin descripción personalizada\n"
+    
     await message.answer(
         f"✅ <b>Contenido PPV creado exitosamente</b>\n\n"
         f"🆔 ID del contenido: <code>{content_id}</code>\n"
-        f"💰 Precio: {price} ⭐️\n\n"
+        f"💰 Precio: {data['price']} ⭐️\n"
+        f"{desc_preview}\n"
         f"🔗 Los fans pueden comprarlo con:\n"
         f"<code>/comprar_ppv {content_id}</code>"
     )

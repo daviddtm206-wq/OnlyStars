@@ -221,9 +221,9 @@ async def send_paid_content_individual(callback: CallbackQuery, paid_content: li
             elif file_type == "video":
                 paid_media_items.append(InputPaidMediaVideo(media=file_id))
             
-            # Enviar como Paid Media individual con solo la descripción del creador
+            # Enviar como Paid Media individual con solo la descripción del creador (si existe)
             if paid_media_items and price_stars > 0:
-                caption = description
+                caption = description if description and description.strip() else None
                 
                 await callback.message.bot.send_paid_media(
                     chat_id=callback.message.chat.id,
@@ -252,7 +252,7 @@ async def send_purchased_content_individual(callback: CallbackQuery, purchased_c
             file_id = content[5]
             file_type = content[6]
             
-            caption = description
+            caption = description if description and description.strip() else None
             keyboard = [[InlineKeyboardButton(text="👁️ Ver contenido completo", callback_data=f"show_purchased_{content_id}")]]
             reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
             
@@ -289,11 +289,11 @@ async def send_content_album_fallback(callback: CallbackQuery, content_list: lis
         already_purchased = has_purchased_ppv(callback.from_user.id, content_id)
         
         if already_purchased:
-            caption = description
+            caption = description if description and description.strip() else None
             keyboard = [[InlineKeyboardButton(text="👁️ Ver contenido completo", callback_data=f"show_purchased_{content_id}")]]
             has_spoiler = False
         else:
-            caption = description
+            caption = description if description and description.strip() else None
             keyboard = [[InlineKeyboardButton(text=f"🛒 Comprar por {price_stars} ⭐️", callback_data=f"buy_catalog_ppv_{content_id}")]]
             has_spoiler = True
         
