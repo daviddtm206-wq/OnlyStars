@@ -156,15 +156,24 @@ async def send_tip(message: Message):
 
 @router.pre_checkout_query()
 async def process_pre_checkout(pre_checkout_query: PreCheckoutQuery):
-    """Valida el pago antes de procesarlo"""
+    """Valida el pago antes de procesarlo CON SEGURIDAD REFORZADA"""
     payload = pre_checkout_query.invoice_payload
     
     if payload.startswith("ppv_"):
         # Validar compra PPV
         parts = payload.split("_")
         if len(parts) >= 3:
-            content_id = int(parts[1])
-            buyer_id = int(parts[2])
+            try:
+                content_id = int(parts[1])
+                buyer_id = int(parts[2])
+            except ValueError:
+                await pre_checkout_query.answer(ok=False, error_message="Datos de pago inválidos")
+                return
+            
+            # CRÍTICO: Verificar que buyer_id coincida con el usuario actual
+            if buyer_id != pre_checkout_query.from_user.id:
+                await pre_checkout_query.answer(ok=False, error_message="Error de autenticación")
+                return
             
             # Verificar que el contenido aún existe
             content = get_ppv_content(content_id)
@@ -186,8 +195,18 @@ async def process_pre_checkout(pre_checkout_query: PreCheckoutQuery):
         # Validar propina
         parts = payload.split("_")
         if len(parts) >= 4:
-            creator_id = int(parts[1])
-            tipper_id = int(parts[2])
+            try:
+                creator_id = int(parts[1])
+                tipper_id = int(parts[2])
+                amount = int(parts[3])
+            except ValueError:
+                await pre_checkout_query.answer(ok=False, error_message="Datos de propina inválidos")
+                return
+            
+            # CRÍTICO: Verificar que tipper_id coincida con el usuario actual
+            if tipper_id != pre_checkout_query.from_user.id:
+                await pre_checkout_query.answer(ok=False, error_message="Error de autenticación")
+                return
             
             # Verificar que el creador existe
             creator = get_creator_by_id(creator_id)
@@ -205,7 +224,7 @@ async def process_pre_checkout(pre_checkout_query: PreCheckoutQuery):
 
 @router.message(F.successful_payment)
 async def process_successful_payment(message: Message):
-    """Procesa pagos exitosos y entrega contenido"""
+    """Procesa pagos exitosos y entrega contenido CON SEGURIDAD REFORZADA"""
     payment: SuccessfulPayment = message.successful_payment
     payload = payment.invoice_payload
     amount_stars = payment.total_amount
@@ -213,8 +232,21 @@ async def process_successful_payment(message: Message):
     if payload.startswith("ppv_"):
         # Procesar compra PPV
         parts = payload.split("_")
-        content_id = int(parts[1])
-        buyer_id = int(parts[2])
+        if len(parts) < 3:
+            await message.answer("❌ Error: Datos de pago incompletos")
+            return
+            
+        try:
+            content_id = int(parts[1])
+            buyer_id = int(parts[2])
+        except ValueError:
+            await message.answer("❌ Error: Datos de pago inválidos")
+            return
+        
+        # CRÍTICO: Verificar que buyer_id coincida con el usuario actual
+        if buyer_id != message.from_user.id:
+            await message.answer("❌ Error de autenticación en el pago")
+            return
         
         # Obtener información del contenido
         content = get_ppv_content(content_id)
@@ -229,23 +261,26 @@ async def process_successful_payment(message: Message):
             _, creator_id, title, description, price_stars, file_id, file_type = content[:7]
             album_type = 'single'  # Compatibilidad con registros antiguos
         
-        # Registrar la compra
-        add_ppv_purchase(buyer_id, content_id)
+        # CRÍTICO: Registrar la compra de manera atómica (evita duplicados)
+        purchase_added = add_ppv_purchase(buyer_id, content_id)
+        if not purchase_added:
+            # Ya fue comprado, entregar contenido sin procesar pago nuevamente
+            await message.answer("✅ <b>Contenido ya desbloqueado</b>\n\n📦 Tu contenido:")
+        else:
+            # Nueva compra: procesar pago completo
+            # Calcular comisión y ganancia del creador
+            commission = (amount_stars * COMMISSION_PERCENTAGE) // 100
+            creator_earnings = amount_stars - commission
+            
+            # Actualizar balance del creador
+            update_balance(creator_id, creator_earnings)
+            
+            # Registrar transacción
+            add_transaction(buyer_id, creator_id, amount_stars, commission, "ppv")
+            
+            await message.answer(f"✅ <b>¡Compra exitosa!</b>\n\n💰 Pagaste: {amount_stars} ⭐️\n\n📦 Tu contenido:")
         
-        # Calcular comisión y ganancia del creador
-        commission = (amount_stars * COMMISSION_PERCENTAGE) // 100
-        creator_earnings = amount_stars - commission
-        
-        # Actualizar balance del creador
-        update_balance(creator_id, creator_earnings)
-        
-        # Registrar transacción
-        add_transaction(buyer_id, creator_id, amount_stars, commission, "ppv")
-        
-        # Entregar contenido al comprador
-        await message.answer(f"✅ <b>¡Compra exitosa!</b>\n\n💰 Pagaste: {amount_stars} ⭐️\n\n📦 Tu contenido:")
-        
-        # Mostrar álbum o contenido individual según corresponda
+        # Mostrar álbum o contenido individual según corresponda (independiente de si es nueva compra o ya existía)
         if album_type == 'album':
             from aiogram.utils.media_group import MediaGroupBuilder
             album_items = get_ppv_album_items(content_id)
@@ -274,8 +309,22 @@ async def process_successful_payment(message: Message):
     elif payload.startswith("tip_"):
         # Procesar propina
         parts = payload.split("_")
-        creator_id = int(parts[1])
-        tipper_id = int(parts[2])
+        if len(parts) < 4:
+            await message.answer("❌ Error: Datos de propina incompletos")
+            return
+            
+        try:
+            creator_id = int(parts[1])
+            tipper_id = int(parts[2])
+            amount = int(parts[3])
+        except ValueError:
+            await message.answer("❌ Error: Datos de propina inválidos")
+            return
+        
+        # CRÍTICO: Verificar que tipper_id coincida con el usuario actual
+        if tipper_id != message.from_user.id:
+            await message.answer("❌ Error de autenticación en la propina")
+            return
         
         # Obtener información del creador
         creator = get_creator_by_id(creator_id)

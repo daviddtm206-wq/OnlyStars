@@ -85,6 +85,7 @@ async def pre_checkout_handler(pre_checkout_query: PreCheckoutQuery):
 
 @router.message(F.successful_payment)
 async def successful_payment_handler(message: Message):
+    """Handler EXCLUSIVO para suscripciones - PPV y propinas se manejan en ppv_handlers.py"""
     payment = message.successful_payment
     payload = payment.invoice_payload  # Ej: "sub_12345_67890"
     amount_stars = payment.total_amount
@@ -93,14 +94,10 @@ async def successful_payment_handler(message: Message):
     parts = payload.split("_")
     payment_type = parts[0]
     
+    # SOLO manejar suscripciones aquí - el resto lo maneja ppv_handlers.py
     if payment_type == "sub":
         await handle_subscription_payment(message, parts, amount_stars, payer_id)
-    elif payment_type == "ppv":
-        await handle_ppv_payment(message, parts, amount_stars, payer_id)
-    elif payment_type == "tip":
-        await handle_tip_payment(message, parts, amount_stars, payer_id)
-    else:
-        await message.answer("❌ Tipo de pago no reconocido.")
+    # PPV y propinas se manejan en ppv_handlers.py para evitar conflictos
 
 async def handle_subscription_payment(message, parts, amount_stars, payer_id):
     if len(parts) < 3:
@@ -138,83 +135,6 @@ async def handle_subscription_payment(message, parts, amount_stars, payer_id):
         f"✅ ¡Ya tienes acceso al contenido exclusivo por 30 días!"
     )
 
-async def handle_ppv_payment(message, parts, amount_stars, payer_id):
-    if len(parts) < 3:
-        await message.answer("❌ Error en la transacción PPV.")
-        return
-    
-    try:
-        content_id = int(parts[1])
-        payer_id_confirmed = int(parts[2])
-    except ValueError:
-        await message.answer("❌ Error en los datos de la transacción.")
-        return
-    
-    if payer_id != payer_id_confirmed:
-        await message.answer("❌ Error: ID de pagador no coincide.")
-        return
-    
-    content = get_ppv_content(content_id)
-    if not content:
-        await message.answer("❌ Contenido no encontrado.")
-        return
-    
-    creator_id = content[1]
-    file_id = content[5]
-    file_type = content[6]
-    title = content[2]
-    
-    commission_stars = int(amount_stars * COMMISSION_PERCENTAGE / 100)
-    creator_earnings = amount_stars - commission_stars
-    
-    add_transaction(payer_id, creator_id, creator_earnings, commission_stars, "ppv")
-    update_balance(creator_id, creator_earnings)
-    add_ppv_purchase(payer_id, content_id)
-    
-    await message.answer(
-        f"🎉 ¡Compra PPV exitosa!\n\n"
-        f"💰 Pagaste: {amount_stars} ⭐️\n"
-        f"📝 Comisión: {commission_stars} ⭐️\n"
-        f"💎 Ganancia del creador: {creator_earnings} ⭐️\n\n"
-        f"📸 Aquí tienes tu contenido:"
-    )
-    
-    if file_type == "photo":
-        await message.answer_photo(photo=file_id, caption=f"📸 {title}")
-    elif file_type == "video":
-        await message.answer_video(video=file_id, caption=f"🎬 {title}")
-
-async def handle_tip_payment(message, parts, amount_stars, payer_id):
-    if len(parts) < 4:
-        await message.answer("❌ Error en la transacción de propina.")
-        return
-    
-    try:
-        creator_id = int(parts[1])
-        payer_id_confirmed = int(parts[2])
-        tip_amount = int(parts[3])
-    except ValueError:
-        await message.answer("❌ Error en los datos de la transacción.")
-        return
-    
-    if payer_id != payer_id_confirmed:
-        await message.answer("❌ Error: ID de pagador no coincide.")
-        return
-    
-    commission_stars = int(amount_stars * COMMISSION_PERCENTAGE / 100)
-    creator_earnings = amount_stars - commission_stars
-    
-    add_transaction(payer_id, creator_id, creator_earnings, commission_stars, "tip")
-    update_balance(creator_id, creator_earnings)
-    
-    creator = get_creator_by_id(creator_id)
-    creator_name = creator[3] if creator else "Creador"
-    
-    await message.answer(
-        f"💝 ¡Propina enviada exitosamente!\n\n"
-        f"👤 Para: {creator_name}\n"
-        f"💰 Monto: {amount_stars} ⭐️\n"
-        f"📝 Comisión: {commission_stars} ⭐️\n"
-        f"💎 Recibió: {creator_earnings} ⭐️\n\n"
-        f"❤️ ¡Tu apoyo significa mucho para el creador!"
-    )
+# ELIMINADO: handle_ppv_payment y handle_tip_payment 
+# Estas funciones se movieron COMPLETAMENTE a ppv_handlers.py para evitar conflictos
+# TODOS los pagos PPV y propinas se manejan exclusivamente en ppv_handlers.py

@@ -77,7 +77,8 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             buyer_id INTEGER,
             content_id INTEGER,
-            purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(buyer_id, content_id)
         )
     ''')
     
@@ -264,11 +265,18 @@ def get_ppv_content(content_id):
     return row
 
 def add_ppv_purchase(buyer_id, content_id):
+    """Agrega una compra PPV de manera segura, evitando duplicados"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO ppv_purchases (buyer_id, content_id) VALUES (?, ?)", (buyer_id, content_id))
-    conn.commit()
-    conn.close()
+    try:
+        cursor.execute("INSERT INTO ppv_purchases (buyer_id, content_id) VALUES (?, ?)", (buyer_id, content_id))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        # Ya existe esta compra, no hacer nada
+        return False
+    finally:
+        conn.close()
 
 def has_purchased_ppv(buyer_id, content_id):
     conn = sqlite3.connect(DB_PATH)

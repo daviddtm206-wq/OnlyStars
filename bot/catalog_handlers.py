@@ -15,12 +15,12 @@ COMMISSION_PERCENTAGE = int(os.getenv("COMMISSION_PERCENTAGE", 20))
 
 router = Router()
 
-# Handler para procesar compras de Paid Media
-@router.message(F.successful_payment)
+# Handler para procesar compras de Paid Media (CORREGIDO para usar paid_media_purchased)
+@router.message(F.paid_media_purchased)
 async def process_paid_media_purchase(message: Message):
     """Procesa compras exitosas de Paid Media desde el catálogo"""
-    # Este handler complementa al de ppv_handlers.py para Paid Media
-    # Las compras por factura (/comprar_ppv) se siguen manejando en ppv_handlers.py
+    # IMPORTANTE: Este handler ahora usa paid_media_purchased (correcto para Paid Media)
+    # Las compras por factura (/comprar_ppv) se manejan en ppv_handlers.py
     
     # Verificar si hay información de Paid Media tracking
     if hasattr(message.bot, '_paid_media_tracking'):
@@ -34,11 +34,9 @@ async def process_paid_media_purchase(message: Message):
                 price_stars = tracking_info['price_stars']
                 album_type = tracking_info['album_type']
                 
-                # Verificar si ya fue comprado (evitar duplicados)
-                if not has_purchased_ppv(message.from_user.id, content_id):
-                    # Registrar la compra
-                    add_ppv_purchase(message.from_user.id, content_id)
-                    
+                # Verificar si ya fue comprado (evitar duplicados) y usar return value seguro
+                purchase_added = add_ppv_purchase(message.from_user.id, content_id)
+                if purchase_added:
                     # Calcular comisión y ganancia del creador
                     commission = (price_stars * COMMISSION_PERCENTAGE) // 100
                     creator_earnings = price_stars - commission
@@ -56,6 +54,12 @@ async def process_paid_media_purchase(message: Message):
                         f"💰 Pagaste: {price_stars} ⭐️\n"
                         f"📦 {content_type} desbloqueado\n\n"
                         f"💡 Ahora puedes ver este contenido en /mis_catalogos"
+                    )
+                else:
+                    # Ya fue comprado, solo confirmar
+                    await message.answer(
+                        f"✅ <b>Contenido ya desbloqueado</b>\n\n"
+                        f"💡 Puedes ver este contenido en /mis_catalogos"
                     )
                 
                 # Limpiar tracking
