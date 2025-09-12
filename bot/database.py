@@ -55,7 +55,20 @@ def init_db():
             price_stars INTEGER,
             file_id TEXT,
             file_type TEXT, -- 'photo' or 'video'
+            album_type TEXT DEFAULT 'single', -- 'single' or 'album'
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ppv_album_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            album_id INTEGER,
+            file_id TEXT,
+            file_type TEXT, -- 'photo' or 'video'
+            order_position INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (album_id) REFERENCES ppv_content(id) ON DELETE CASCADE
         )
     ''')
     
@@ -75,6 +88,19 @@ def init_db():
             banned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
+    # === MIGRATION LOGIC FOR EXISTING DATABASES ===
+    # Add album_type column to ppv_content if it doesn't exist (for databases created before this feature)
+    try:
+        # Check if album_type column exists
+        cursor.execute("PRAGMA table_info(ppv_content)")
+        columns = [column[1] for column in cursor.fetchall()]
+        
+        if 'album_type' not in columns:
+            cursor.execute("ALTER TABLE ppv_content ADD COLUMN album_type TEXT DEFAULT 'single'")
+            print("✅ Migration: Added album_type column to ppv_content table")
+    except Exception as e:
+        print(f"⚠️ Migration warning: {e}")
     
     conn.commit()
     conn.close()
@@ -192,17 +218,42 @@ def ban_user(user_id):
     conn.commit()
     conn.close()
 
-def add_ppv_content(creator_id, title, description, price_stars, file_id, file_type):
+def add_ppv_content(creator_id, title, description, price_stars, file_id=None, file_type=None, album_type='single'):
+    """Crea contenido PPV individual o álbum"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO ppv_content (creator_id, title, description, price_stars, file_id, file_type)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (creator_id, title, description, price_stars, file_id, file_type))
+        INSERT INTO ppv_content (creator_id, title, description, price_stars, file_id, file_type, album_type)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (creator_id, title, description, price_stars, file_id, file_type, album_type))
     content_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return content_id
+
+def add_ppv_album_item(album_id, file_id, file_type, order_position):
+    """Agrega un archivo al álbum PPV"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO ppv_album_items (album_id, file_id, file_type, order_position)
+        VALUES (?, ?, ?, ?)
+    ''', (album_id, file_id, file_type, order_position))
+    conn.commit()
+    conn.close()
+
+def get_ppv_album_items(album_id):
+    """Obtiene todos los archivos de un álbum en orden"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT * FROM ppv_album_items 
+        WHERE album_id = ? 
+        ORDER BY order_position
+    ''', (album_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
 
 def get_ppv_content(content_id):
     conn = sqlite3.connect(DB_PATH)

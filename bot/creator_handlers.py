@@ -7,7 +7,8 @@ from aiogram.fsm.state import State, StatesGroup
 from database import (add_creator, get_creator_by_id, get_all_creators, get_creator_stats, 
                      get_user_balance, withdraw_balance, add_ppv_content, is_user_banned,
                      update_creator_display_name, update_creator_description, 
-                     update_creator_subscription_price, update_creator_photo)
+                     update_creator_subscription_price, update_creator_photo,
+                     add_ppv_album_item)
 from dotenv import load_dotenv
 import os
 import time
@@ -25,6 +26,7 @@ class CreatorRegistration(StatesGroup):
 
 class PPVCreation(StatesGroup):
     waiting_for_content = State()
+    waiting_for_more_content = State()
     waiting_for_price = State()
     waiting_for_description = State()
 
@@ -297,7 +299,8 @@ async def create_ppv_content(message: Message, state: FSMContext):
     
     await message.answer(
         "📸 <b>CREAR CONTENIDO PPV</b>\n\n"
-        "Envía la foto o video que quieres vender:"
+        "Envía la primera foto o video de tu álbum:\n\n"
+        "💡 <i>Podrás agregar más fotos/videos después</i>"
     )
     await state.set_state(PPVCreation.waiting_for_content)
 
@@ -316,9 +319,81 @@ async def process_ppv_content(message: Message, state: FSMContext):
         await message.answer("❌ Por favor envía una foto o video:")
         return
     
-    await state.update_data(file_id=file_id, file_type=file_type)
-    await message.answer("💰 ¿Cuál será el precio de este contenido en ⭐️ Stars?")
+    # Inicializar lista de archivos en el álbum
+    await state.update_data(album_files=[{'file_id': file_id, 'file_type': file_type}])
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➕ Agregar más fotos/videos", callback_data="add_more_content")],
+        [InlineKeyboardButton(text="✅ Continuar con este archivo", callback_data="finish_content")]
+    ])
+    
+    content_type = "📸 Foto" if file_type == "photo" else "🎥 Video"
+    await message.answer(
+        f"✅ {content_type} agregada al álbum\n\n"
+        f"¿Quieres agregar más contenido a este álbum?",
+        reply_markup=keyboard
+    )
+    await state.set_state(PPVCreation.waiting_for_more_content)
+
+@router.callback_query(F.data == "add_more_content")
+async def add_more_content(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    album_files = data.get('album_files', [])
+    
+    await callback.message.edit_text(
+        f"📁 <b>ÁLBUM PPV ({len(album_files)} archivos)</b>\n\n"
+        f"Envía otra foto o video para agregar al álbum:"
+    )
+    await state.set_state(PPVCreation.waiting_for_more_content)
+
+@router.callback_query(F.data == "finish_content")
+async def finish_content(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("💰 ¿Cuál será el precio de este contenido en ⭐️ Stars?")
     await state.set_state(PPVCreation.waiting_for_price)
+
+@router.message(PPVCreation.waiting_for_more_content)
+async def process_more_content(message: Message, state: FSMContext):
+    file_id = None
+    file_type = None
+    
+    if message.photo:
+        file_id = message.photo[-1].file_id
+        file_type = "photo"
+    elif message.video:
+        file_id = message.video.file_id
+        file_type = "video"
+    else:
+        await message.answer("❌ Por favor envía una foto o video, o usa los botones para continuar:")
+        return
+    
+    # Agregar archivo a la lista
+    data = await state.get_data()
+    album_files = data.get('album_files', [])
+    album_files.append({'file_id': file_id, 'file_type': file_type})
+    await state.update_data(album_files=album_files)
+    
+    # Limitar a 10 archivos por álbum
+    if len(album_files) >= 10:
+        await message.answer(
+            f"📁 <b>ÁLBUM COMPLETO ({len(album_files)} archivos)</b>\n\n"
+            f"Has alcanzado el límite máximo de 10 archivos por álbum.\n\n"
+            f"💰 ¿Cuál será el precio de este álbum en ⭐️ Stars?"
+        )
+        await state.set_state(PPVCreation.waiting_for_price)
+        return
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➕ Agregar más fotos/videos", callback_data="add_more_content")],
+        [InlineKeyboardButton(text="✅ Finalizar álbum", callback_data="finish_content")]
+    ])
+    
+    content_type = "📸 Foto" if file_type == "photo" else "🎥 Video"
+    await message.answer(
+        f"✅ {content_type} agregada al álbum\n\n"
+        f"📁 <b>Archivos actuales: {len(album_files)}</b>\n"
+        f"¿Quieres agregar más contenido?",
+        reply_markup=keyboard
+    )
 
 @router.message(PPVCreation.waiting_for_price)
 async def process_ppv_price(message: Message, state: FSMContext):
@@ -341,6 +416,7 @@ async def process_ppv_price(message: Message, state: FSMContext):
 @router.message(PPVCreation.waiting_for_description)
 async def process_ppv_description(message: Message, state: FSMContext):
     data = await state.get_data()
+    album_files = data.get('album_files', [])
     
     # Si el usuario envía /saltar, usar descripción vacía
     if message.text and message.text.lower() == '/saltar':
@@ -348,14 +424,41 @@ async def process_ppv_description(message: Message, state: FSMContext):
     else:
         description = message.text or ""
     
-    content_id = add_ppv_content(
-        creator_id=message.from_user.id,
-        title=f"Contenido PPV #{int(time.time())}",
-        description=description,
-        price_stars=data['price'],
-        file_id=data['file_id'],
-        file_type=data['file_type']
-    )
+    # Determinar si es álbum o contenido individual
+    if len(album_files) > 1:
+        # Crear álbum
+        content_id = add_ppv_content(
+            creator_id=message.from_user.id,
+            title=f"Álbum PPV #{int(time.time())}",
+            description=description,
+            price_stars=data['price'],
+            album_type='album'
+        )
+        
+        # Agregar todos los archivos al álbum
+        for i, file_data in enumerate(album_files):
+            add_ppv_album_item(
+                album_id=content_id,
+                file_id=file_data['file_id'],
+                file_type=file_data['file_type'],
+                order_position=i
+            )
+        
+        content_type = f"📁 Álbum ({len(album_files)} archivos)"
+    else:
+        # Crear contenido individual (compatibilidad con versión anterior)
+        file_data = album_files[0]
+        content_id = add_ppv_content(
+            creator_id=message.from_user.id,
+            title=f"Contenido PPV #{int(time.time())}",
+            description=description,
+            price_stars=data['price'],
+            file_id=file_data['file_id'],
+            file_type=file_data['file_type'],
+            album_type='single'
+        )
+        
+        content_type = "📸 Foto" if file_data['file_type'] == "photo" else "🎥 Video"
     
     if description:
         desc_preview = f"📝 Descripción: {description[:50]}{'...' if len(description) > 50 else ''}\n"
@@ -363,7 +466,7 @@ async def process_ppv_description(message: Message, state: FSMContext):
         desc_preview = "📝 Sin descripción personalizada\n"
     
     await message.answer(
-        f"✅ <b>Contenido PPV creado exitosamente</b>\n\n"
+        f"✅ <b>{content_type} creado exitosamente</b>\n\n"
         f"🆔 ID del contenido: <code>{content_id}</code>\n"
         f"💰 Precio: {data['price']} ⭐️\n"
         f"{desc_preview}\n"

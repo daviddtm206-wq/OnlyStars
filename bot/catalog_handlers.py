@@ -6,7 +6,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from database import (get_creator_by_id, is_user_banned, get_active_subscriptions, 
-                     get_ppv_by_creator, has_purchased_ppv, get_ppv_content)
+                     get_ppv_by_creator, has_purchased_ppv, get_ppv_content, get_ppv_album_items)
 import time
 
 router = Router()
@@ -212,14 +212,28 @@ async def send_paid_content_individual(callback: CallbackQuery, paid_content: li
             price_stars = content[4]
             file_id = content[5]
             file_type = content[6]
+            album_type = content[7] if len(content) > 7 else 'single'  # Compatibilidad con registros antiguos
             
-            # Crear media individual para este contenido
-            paid_media_items = []
-            
-            if file_type == "photo":
-                paid_media_items.append(InputPaidMediaPhoto(media=file_id))
-            elif file_type == "video":
-                paid_media_items.append(InputPaidMediaVideo(media=file_id))
+            # Si es un álbum, obtener todos los archivos
+            if album_type == 'album':
+                album_items = get_ppv_album_items(content_id)
+                paid_media_items = []
+                
+                for item in album_items:
+                    item_file_id = item[2]  # file_id en ppv_album_items
+                    item_file_type = item[3]  # file_type en ppv_album_items
+                    
+                    if item_file_type == "photo":
+                        paid_media_items.append(InputPaidMediaPhoto(media=item_file_id))
+                    elif item_file_type == "video":
+                        paid_media_items.append(InputPaidMediaVideo(media=item_file_id))
+            else:
+                # Contenido individual (compatibilidad hacia atrás)
+                paid_media_items = []
+                if file_type == "photo":
+                    paid_media_items.append(InputPaidMediaPhoto(media=file_id))
+                elif file_type == "video":
+                    paid_media_items.append(InputPaidMediaVideo(media=file_id))
             
             # Enviar como Paid Media individual con solo la descripción del creador (si existe)
             if paid_media_items and price_stars > 0:
@@ -251,25 +265,48 @@ async def send_purchased_content_individual(callback: CallbackQuery, purchased_c
             price_stars = content[4]  # Mostrar el precio original que se pagó
             file_id = content[5]
             file_type = content[6]
+            album_type = content[7] if len(content) > 7 else 'single'  # Compatibilidad con registros antiguos
             
             caption = description if description and description.strip() else None
-            keyboard = [[InlineKeyboardButton(text="👁️ Ver contenido completo", callback_data=f"show_purchased_{content_id}")]]
-            reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
             
-            if file_type == "photo":
-                await callback.message.bot.send_photo(
+            # Si es un álbum, mostrar como media group
+            if album_type == 'album':
+                album_items = get_ppv_album_items(content_id)
+                media_group = MediaGroupBuilder(caption=caption)
+                
+                for item in album_items:
+                    item_file_id = item[2]  # file_id en ppv_album_items
+                    item_file_type = item[3]  # file_type en ppv_album_items
+                    
+                    if item_file_type == "photo":
+                        media_group.add_photo(media=item_file_id)
+                    elif item_file_type == "video":
+                        media_group.add_video(media=item_file_id)
+                
+                # Enviar álbum completo
+                await callback.message.bot.send_media_group(
                     chat_id=callback.message.chat.id,
-                    photo=file_id,
-                    caption=caption,
-                    reply_markup=reply_markup
+                    media=media_group.build()
                 )
-            elif file_type == "video":
-                await callback.message.bot.send_video(
-                    chat_id=callback.message.chat.id,
-                    video=file_id,
-                    caption=caption,
-                    reply_markup=reply_markup
-                )
+            else:
+                # Contenido individual (compatibilidad hacia atrás)
+                keyboard = [[InlineKeyboardButton(text="👁️ Ver contenido completo", callback_data=f"show_purchased_{content_id}")]]
+                reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+                
+                if file_type == "photo":
+                    await callback.message.bot.send_photo(
+                        chat_id=callback.message.chat.id,
+                        photo=file_id,
+                        caption=caption,
+                        reply_markup=reply_markup
+                    )
+                elif file_type == "video":
+                    await callback.message.bot.send_video(
+                        chat_id=callback.message.chat.id,
+                        video=file_id,
+                        caption=caption,
+                        reply_markup=reply_markup
+                    )
                     
     except Exception as e:
         # Fallback a mensajes individuales si falla el envío
