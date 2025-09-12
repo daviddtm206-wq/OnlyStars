@@ -134,180 +134,99 @@ async def show_creator_catalog(callback: CallbackQuery, state: FSMContext):
             pass
         return
     
-    # Mostrar el primer contenido del catálogo
-    await show_catalog_content(callback.message, creator_id, 0, edit=True)
+    # Mostrar el catálogo completo estilo canal
+    await show_complete_catalog(callback, creator_id, display_name)
 
-async def show_catalog_content(message, creator_id: int, content_index: int, edit: bool = False):
-    """Muestra un contenido específico del catálogo con navegación"""
-    creator = get_creator_by_id(creator_id)
-    display_name = creator[3] if creator else "Creador"
-    
-    ppv_content = get_ppv_by_creator(creator_id)
-    
-    if content_index >= len(ppv_content) or content_index < 0:
-        content_index = 0
-    
-    content = ppv_content[content_index]
-    content_id = content[0]
-    title = content[2]
-    description = content[3]
-    price_stars = content[4]
-    file_id = content[5]
-    file_type = content[6]
-    
-    # Verificar si el usuario ya compró este contenido
-    user_id = message.chat.id
-    already_purchased = has_purchased_ppv(user_id, content_id)
-    
-    # Texto del mensaje
-    catalog_text = f"📺 <b>CATÁLOGO DE {display_name}</b>\n"
-    catalog_text += f"(Solo para suscriptores)\n\n"
-    catalog_text += f"💎 <b>{title}</b>\n"
-    catalog_text += f"📝 {description}\n"
-    catalog_text += f"💰 Precio: {price_stars} ⭐️\n\n"
-    catalog_text += f"📊 Contenido {content_index + 1} de {len(ppv_content)}\n\n"
-    
-    if already_purchased:
-        catalog_text += "✅ <b>YA COMPRADO</b> - Ver contenido abajo"
-    else:
-        catalog_text += "🔒 <b>Contenido bloqueado</b> - Compra para ver\n\n"
-        if file_type == "photo":
-            catalog_text += "📸 <i>Imagen Premium</i>"
-        elif file_type == "video":
-            catalog_text += "🎬 <i>Video Premium</i>"
-    
-    # Crear teclado de navegación
-    keyboard = []
-    
-    # Fila de navegación
-    nav_buttons = []
-    if content_index > 0:
-        nav_buttons.append(InlineKeyboardButton(text="⬅️ Anterior", callback_data=f"catalog_nav_{creator_id}_{content_index-1}"))
-    if content_index < len(ppv_content) - 1:
-        nav_buttons.append(InlineKeyboardButton(text="Siguiente ➡️", callback_data=f"catalog_nav_{creator_id}_{content_index+1}"))
-    
-    if nav_buttons:
-        keyboard.append(nav_buttons)
-    
-    # Botón de compra/ver contenido
-    if already_purchased:
-        keyboard.append([InlineKeyboardButton(text="👁️ Ver contenido", callback_data=f"show_purchased_{content_id}")])
-    else:
-        keyboard.append([InlineKeyboardButton(text=f"🛒 Comprar por {price_stars} ⭐️", callback_data=f"buy_catalog_ppv_{content_id}")])
-    
-    # Botón para volver a la lista de catálogos
-    keyboard.append([InlineKeyboardButton(text="📚 Volver a mis catálogos", callback_data="back_to_catalogs")])
-    
-    reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
-    
-    # CRITICAL BUG FIX: Detectar transición de media a texto
-    is_target_text_only = not already_purchased
-    is_current_media = edit and (hasattr(message, 'photo') or hasattr(message, 'video'))
-    needs_delete_and_send = is_current_media and is_target_text_only
-    
-    try:
-        if already_purchased:
-            # Si ya compró el contenido, mostrar con la imagen/video visible
-            if file_type == "photo":
-                if edit:
-                    # No se puede editar un mensaje de texto a imagen, enviar nuevo
-                    await message.delete()
-                    await message.bot.send_photo(
-                        chat_id=message.chat.id,
-                        photo=file_id,
-                        caption=catalog_text,
-                        reply_markup=reply_markup
-                    )
-                else:
-                    await message.bot.send_photo(
-                        chat_id=message.chat.id,
-                        photo=file_id,
-                        caption=catalog_text,
-                        reply_markup=reply_markup
-                    )
-            elif file_type == "video":
-                if edit:
-                    await message.delete()
-                    await message.bot.send_video(
-                        chat_id=message.chat.id,
-                        video=file_id,
-                        caption=catalog_text,
-                        reply_markup=reply_markup
-                    )
-                else:
-                    await message.bot.send_video(
-                        chat_id=message.chat.id,
-                        video=file_id,
-                        caption=catalog_text,
-                        reply_markup=reply_markup
-                    )
-        else:
-            # SECURITY FIX: Para contenido no comprado, NUNCA enviar el file_id real
-            # Solo mostrar texto descriptivo + botón de compra para evitar bypass del paywall
-            if edit and needs_delete_and_send:
-                # CRITICAL FIX: Transición de media a texto requiere delete + send
-                await message.delete()
-                await message.bot.send_message(
-                    chat_id=message.chat.id,
-                    text=catalog_text,
-                    reply_markup=reply_markup
-                )
-            elif edit:
-                # Transición texto a texto - se puede usar edit_text
-                await message.edit_text(catalog_text, reply_markup=reply_markup)
-            else:
-                # Nuevo mensaje
-                await message.answer(catalog_text, reply_markup=reply_markup)
-    except Exception as e:
-        # Si hay error, usar fallback con delete + send
-        try:
-            if edit:
-                # Fallback: intentar delete + send si edit falla
-                await message.delete()
-                await message.bot.send_message(
-                    chat_id=message.chat.id,
-                    text=catalog_text,
-                    reply_markup=reply_markup
-                )
-            else:
-                await message.answer(catalog_text, reply_markup=reply_markup)
-        except Exception as e2:
-            # Último recurso: mensaje simple sin botones
-            await message.bot.send_message(
-                chat_id=message.chat.id,
-                text="❌ Error mostrando el catálogo. Usa /mis_catalogos para reintentar."
-            )
-
-@router.callback_query(F.data.startswith("catalog_nav_"))
-async def navigate_catalog(callback: CallbackQuery):
-    """Navegar por el catálogo de un creador"""
+async def show_complete_catalog(callback: CallbackQuery, creator_id: int, creator_name: str):
+    """Muestra el catálogo completo estilo canal tradicional de Telegram"""
     await callback.answer()
     
-    if not callback.from_user:
-        return
-        
-    if is_user_banned(callback.from_user.id):
-        await callback.message.edit_text("❌ Tu cuenta está baneada.")
-        return
+    # Obtener todo el contenido PPV del creador
+    ppv_content = get_ppv_by_creator(creator_id)
+    user_id = callback.from_user.id
     
-    parts = callback.data.split("_")
-    creator_id = int(parts[2])
-    content_index = int(parts[3])
-    
-    # Verificar que el usuario tenga suscripción activa a este creador
-    subscriptions = get_active_subscriptions(callback.from_user.id)
-    has_subscription = any(sub[2] == creator_id for sub in subscriptions)
-    
-    if not has_subscription:
+    if not ppv_content:
         await callback.message.edit_text(
-            "❌ <b>Acceso denegado</b>\n\n"
-            "Tu suscripción a este creador ha expirado o no tienes una suscripción activa.\n\n"
-            "💡 Para acceder al catálogo, renueva tu suscripción usando:\n"
-            f"/suscribirme_a {creator_id}"
+            f"📺 <b>CATÁLOGO DE {creator_name}</b>\n"
+            f"(Solo para suscriptores)\n\n"
+            f"💭 Este creador aún no ha publicado contenido PPV.\n\n"
+            f"¡Mantente atento para nuevos contenidos exclusivos!",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="📚 Volver a mis catálogos", callback_data="back_to_catalogs")]
+            ])
         )
         return
     
-    await show_catalog_content(callback.message, creator_id, content_index, edit=True)
+    # Eliminar el mensaje anterior
+    await callback.message.delete()
+    
+    # Enviar mensaje de encabezado del catálogo
+    await callback.message.bot.send_message(
+        chat_id=callback.message.chat.id,
+        text=f"📺 <b>CATÁLOGO DE {creator_name}</b>\n"
+             f"(Solo para suscriptores)\n\n"
+             f"📚 {len(ppv_content)} contenidos exclusivos disponibles\n\n"
+             f"💎 <i>Los contenidos aparecerán como posts separados aquí abajo...</i>"
+    )
+    
+    # Enviar cada contenido PPV como mensaje separado (estilo canal)
+    for index, content in enumerate(ppv_content):
+        content_id = content[0]
+        title = content[2] 
+        description = content[3]
+        price_stars = content[4]
+        file_id = content[5]
+        file_type = content[6]
+        
+        # Verificar si ya compró este contenido
+        already_purchased = has_purchased_ppv(user_id, content_id)
+        
+        # Crear el caption con precio superpuesto estilo canal
+        if already_purchased:
+            caption = f"✅ <b>{title}</b>\n\n{description}"
+            keyboard = [[InlineKeyboardButton(text="👁️ Ver contenido completo", callback_data=f"show_purchased_{content_id}")]]
+        else:
+            caption = f"💎 <b>{title}</b>\n\n{description}\n\n💰 <b>Desbloquear por ⭐ {price_stars}</b>"
+            keyboard = [[InlineKeyboardButton(text=f"🛒 Comprar por {price_stars} ⭐️", callback_data=f"buy_catalog_ppv_{content_id}")]]
+        
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+        
+        try:
+            if file_type == "photo":
+                await callback.message.bot.send_photo(
+                    chat_id=callback.message.chat.id,
+                    photo=file_id,
+                    caption=caption,
+                    reply_markup=reply_markup,
+                    has_spoiler=not already_purchased  # Spoiler si no está comprado
+                )
+            elif file_type == "video":
+                await callback.message.bot.send_video(
+                    chat_id=callback.message.chat.id,
+                    video=file_id,
+                    caption=caption,
+                    reply_markup=reply_markup,
+                    has_spoiler=not already_purchased  # Spoiler si no está comprado
+                )
+        except Exception as e:
+            # Fallback a mensaje de texto si falla el media
+            await callback.message.bot.send_message(
+                chat_id=callback.message.chat.id,
+                text=f"📱 <b>Contenido #{index + 1}: {title}</b>\n\n{caption}",
+                reply_markup=reply_markup
+            )
+    
+    # Mensaje final con botón para volver
+    await callback.message.bot.send_message(
+        chat_id=callback.message.chat.id,
+        text="🔚 <b>Fin del catálogo</b>\n\nUsa los botones de abajo para navegar o explorar más creadores.",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📚 Volver a mis catálogos", callback_data="back_to_catalogs")],
+            [InlineKeyboardButton(text="🔍 Explorar más creadores", callback_data="explore_creators")]
+        ])
+    )
+
+# Función de navegación eliminada - ya no es necesaria con el nuevo diseño de canal
 
 @router.callback_query(F.data.startswith("show_purchased_"))
 async def show_purchased_content(callback: CallbackQuery):
@@ -454,3 +373,19 @@ async def back_to_catalogs(callback: CallbackQuery):
                 chat_id=callback.message.chat.id,
                 text="📺 Volver a /mis_catalogos para ver tus catálogos."
             )
+
+@router.callback_query(F.data == "explore_creators") 
+async def explore_creators(callback: CallbackQuery):
+    """Mostrar creadores disponibles para explorar"""
+    await callback.answer()
+    
+    if not callback.from_user or not callback.message:
+        return
+    
+    if is_user_banned(callback.from_user.id):
+        await callback.message.edit_text("❌ Tu cuenta está baneada.")
+        return
+        
+    # Mostrar lista de creadores disponibles
+    from .creator_handlers import show_available_creators
+    await show_available_creators(callback.message, edit=True)
