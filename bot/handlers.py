@@ -37,51 +37,6 @@ async def cmd_start(message: Message):
         "💎 <b>Pagos seguros con Telegram Stars</b> ⭐️"
     )
 
-@router.message(Command("bot_info"))
-async def bot_info_command(message: Message, bot: Bot):
-    """Comando temporal para verificar información del bot"""
-    try:
-        # Obtener información del bot
-        bot_info = await bot.get_me()
-        
-        # Verificar versión de aiogram
-        import aiogram
-        
-        info_text = (
-            f"🤖 <b>Información del Bot</b>\n\n"
-            f"👤 <b>Nombre:</b> {bot_info.first_name}\n"
-            f"🆔 <b>ID:</b> {bot_info.id}\n"
-            f"📛 <b>Username:</b> @{bot_info.username}\n"
-            f"🤖 <b>Es Bot:</b> {bot_info.is_bot}\n"
-            f"👥 <b>Puede unirse a grupos:</b> {bot_info.can_join_groups}\n"
-            f"📚 <b>Lee todos los mensajes:</b> {bot_info.can_read_all_group_messages}\n"
-            f"🔍 <b>Soporta consultas inline:</b> {bot_info.supports_inline_queries}\n\n"
-            f"📦 <b>Versión de aiogram:</b> {aiogram.__version__}\n\n"
-            f"🔧 Verificando funciones de pago..."
-        )
-        
-        await message.answer(info_text)
-        
-        # Intentar verificar si sendPaidMedia está disponible
-        try:
-            # Test si la función existe en el bot
-            if hasattr(bot, 'send_paid_media'):
-                await message.answer("✅ <b>sendPaidMedia:</b> Disponible (Bot API 8.0+)")
-            else:
-                await message.answer("❌ <b>sendPaidMedia:</b> No disponible (necesitas Bot API 8.0+)")
-                
-            # Probar también el método request directo
-            try:
-                await bot.request("getMe")  # Test básico
-                await message.answer("✅ <b>bot.request():</b> Funcionando")
-            except Exception as e:
-                await message.answer(f"❌ <b>bot.request():</b> Error - {str(e)}")
-                
-        except Exception as e:
-            await message.answer(f"❓ <b>Verificación de pagos:</b> Error - {str(e)}")
-            
-    except Exception as e:
-        await message.answer(f"❌ Error obteniendo información del bot: {str(e)}")
 
 @router.message(Command("help"))
 async def cmd_help(message: Message):
