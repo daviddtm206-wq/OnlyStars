@@ -7,6 +7,7 @@ from payments import router as payments_router
 from creator_handlers import router as creator_router
 from admin_handlers import router as admin_router
 from ppv_handlers import router as ppv_router
+from catalog_handlers import router as catalog_router
 
 router = Router()
 
@@ -15,6 +16,7 @@ router.include_router(payments_router)
 router.include_router(creator_router)
 router.include_router(admin_router)
 router.include_router(ppv_router)
+router.include_router(catalog_router)
 
 @router.message(Command("start"))
 async def cmd_start(message: Message):
@@ -24,6 +26,7 @@ async def cmd_start(message: Message):
         "👥 <b>Para Fans:</b>\n"
         "• /explorar_creadores - Ver creadores disponibles\n"
         "• /suscribirme_a &lt;ID&gt; - Suscribirse a un creador\n"
+        "• /mis_catalogos - Ver catálogos de tus suscripciones\n"
         "• /enviar_propina &lt;ID&gt; &lt;monto&gt; - Enviar propina\n"
         "• /comprar_ppv &lt;ID&gt; - Comprar contenido PPV\n\n"
         "🎨 <b>Para Creadores:</b>\n"
@@ -50,6 +53,7 @@ async def cmd_help(message: Message):
         "👥 <b>Para fans:</b>\n"
         "• /explorar_creadores - Ver creadores\n"
         "• /suscribirme_a &lt;ID&gt; - Suscribirse\n"
+        "• /mis_catalogos - Ver catálogos exclusivos\n"
         "• /comprar_ppv &lt;ID&gt; - Comprar contenido\n"
         "• /enviar_propina &lt;ID&gt; &lt;monto&gt; - Enviar propina\n\n"
         "⚡️ <b>Powered by Telegram Stars</b> ⭐️"

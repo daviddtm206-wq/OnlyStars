@@ -172,7 +172,7 @@ def get_all_creators():
 def get_creator_stats(creator_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM subscribers WHERE creator_id = ? AND expires_at > ?", (creator_id, time.time()))
+    cursor.execute("SELECT COUNT(*) FROM subscribers WHERE creator_id = ? AND expires_at > ?", (creator_id, int(time.time())))
     subscribers_count = cursor.fetchone()[0]
     conn.close()
     return subscribers_count
@@ -253,3 +253,28 @@ def withdraw_balance(user_id, amount):
     return success
 
 import time
+
+def get_active_subscriptions(user_id):
+    """Obtiene las suscripciones activas de un usuario"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT * FROM subscribers 
+        WHERE fan_id = ? AND expires_at > ?
+    ''', (user_id, int(time.time())))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def get_ppv_by_creator(creator_id):
+    """Obtiene todo el contenido PPV de un creador específico"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT * FROM ppv_content 
+        WHERE creator_id = ?
+        ORDER BY created_at DESC
+    ''', (creator_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
