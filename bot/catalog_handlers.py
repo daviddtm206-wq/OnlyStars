@@ -180,13 +180,13 @@ async def show_complete_catalog(callback: CallbackQuery, creator_id: int, creato
         else:
             paid_content.append(content)
     
-    # Enviar contenidos ya comprados como álbum normal
+    # Enviar contenidos ya comprados individualmente
     if purchased_content:
-        await send_purchased_content_album(callback, purchased_content, "✅ Contenido ya comprado")
+        await send_purchased_content_individual(callback, purchased_content, "✅ Contenido ya comprado")
     
-    # Enviar contenidos pagados usando sendPaidMedia (con precios superpuestos)
+    # Enviar contenidos pagados individualmente con precios específicos
     if paid_content:
-        await send_paid_content_album(callback, paid_content, creator_name)
+        await send_paid_content_individual(callback, paid_content, creator_name)
     
     # Mensaje final con botón para volver
     await callback.message.bot.send_message(
@@ -198,114 +198,81 @@ async def show_complete_catalog(callback: CallbackQuery, creator_id: int, creato
         ])
     )
 
-async def send_paid_content_album(callback: CallbackQuery, paid_content: list, creator_name: str):
-    """Envía contenidos pagados usando sendPaidMedia con precios superpuestos nativos"""
+async def send_paid_content_individual(callback: CallbackQuery, paid_content: list, creator_name: str):
+    """Envía cada contenido pagado individualmente con su precio específico"""
     try:
         # Importar clases de Paid Media (disponibles en Bot API 8.0+)
         from aiogram.types import InputPaidMediaPhoto, InputPaidMediaVideo
         
-        # Procesar contenidos en grupos de hasta 10 (límite de Telegram)
-        for batch_start in range(0, len(paid_content), 10):
-            batch = paid_content[batch_start:batch_start + 10]
+        # Enviar cada contenido por separado con su precio específico
+        for content in paid_content:
+            content_id = content[0]
+            title = content[2] 
+            description = content[3]
+            price_stars = content[4]
+            file_id = content[5]
+            file_type = content[6]
             
-            # Crear media pagados para este batch
+            # Crear media individual para este contenido
             paid_media_items = []
-            batch_price = 0
             
-            for content in batch:
-                content_id = content[0]
-                title = content[2] 
-                description = content[3]
-                price_stars = content[4]
-                file_id = content[5]
-                file_type = content[6]
-                
-                # Usar el precio más alto del batch para toda la transacción
-                batch_price = max(batch_price, price_stars)
-                
-                if file_type == "photo":
-                    paid_media_items.append(InputPaidMediaPhoto(media=file_id))
-                elif file_type == "video":
-                    paid_media_items.append(InputPaidMediaVideo(media=file_id))
+            if file_type == "photo":
+                paid_media_items.append(InputPaidMediaPhoto(media=file_id))
+            elif file_type == "video":
+                paid_media_items.append(InputPaidMediaVideo(media=file_id))
             
-            # Enviar como Paid Media con precio superpuesto nativo
-            if paid_media_items and batch_price > 0:
-                caption = f"🔐 <b>Contenido exclusivo de {creator_name}</b>\n\n"
-                caption += f"💎 {len(batch)} contenido{'s' if len(batch) > 1 else ''} premium\n"
-                caption += f"⭐ Desbloquea por {batch_price} Telegram Stars"
+            # Enviar como Paid Media individual con el precio específico del creador
+            if paid_media_items and price_stars > 0:
+                caption = f"🔐 <b>{title}</b>\n\n📝 {description}\n\n👤 <b>Creador:</b> {creator_name}\n⭐ <b>Precio:</b> {price_stars} Telegram Stars"
                 
                 await callback.message.bot.send_paid_media(
                     chat_id=callback.message.chat.id,
-                    star_count=batch_price,
+                    star_count=price_stars,
                     media=paid_media_items,
                     caption=caption
                 )
                 
     except ImportError:
-        # Fallback: Si InputPaidMedia no está disponible, usar MediaGroup con spoilers
+        # Fallback: Si InputPaidMedia no está disponible, usar mensajes individuales con spoilers
         await send_content_album_fallback(callback, paid_content, "🔒 Contenido de pago")
     except Exception as e:
         # Fallback en caso de error con Paid Media
         print(f"Error con Paid Media: {e}")
         await send_content_album_fallback(callback, paid_content, "🔒 Contenido de pago")
 
-async def send_purchased_content_album(callback: CallbackQuery, purchased_content: list, caption_prefix: str):
-    """Envía contenidos ya comprados como álbumes normales"""
+async def send_purchased_content_individual(callback: CallbackQuery, purchased_content: list, caption_prefix: str):
+    """Envía cada contenido ya comprado individualmente"""
     try:
-        # Procesar en grupos de hasta 10
-        for batch_start in range(0, len(purchased_content), 10):
-            batch = purchased_content[batch_start:batch_start + 10]
+        # Enviar cada contenido por separado, sin agrupar en álbumes
+        for content in purchased_content:
+            content_id = content[0]
+            title = content[2]
+            description = content[3]
+            price_stars = content[4]  # Mostrar el precio original que se pagó
+            file_id = content[5]
+            file_type = content[6]
             
-            if len(batch) == 1:
-                # Un solo contenido: envío individual
-                content = batch[0]
-                content_id = content[0]
-                title = content[2]
-                description = content[3]
-                file_id = content[5]
-                file_type = content[6]
-                
-                caption = f"{caption_prefix}\n\n💎 <b>{title}</b>\n{description}"
-                keyboard = [[InlineKeyboardButton(text="👁️ Ver contenido completo", callback_data=f"show_purchased_{content_id}")]]
-                reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
-                
-                if file_type == "photo":
-                    await callback.message.bot.send_photo(
-                        chat_id=callback.message.chat.id,
-                        photo=file_id,
-                        caption=caption,
-                        reply_markup=reply_markup
-                    )
-                elif file_type == "video":
-                    await callback.message.bot.send_video(
-                        chat_id=callback.message.chat.id,
-                        video=file_id,
-                        caption=caption,
-                        reply_markup=reply_markup
-                    )
-            else:
-                # Múltiples contenidos: crear álbum con MediaGroup
-                media_group = MediaGroupBuilder(
-                    caption=f"{caption_prefix} - {len(batch)} contenidos"
+            caption = f"✅ <b>{title}</b>\n\n📝 {description}\n\n💰 <b>Precio pagado:</b> ⭐ {price_stars}\n💎 Ya tienes acceso completo a este contenido"
+            keyboard = [[InlineKeyboardButton(text="👁️ Ver contenido completo", callback_data=f"show_purchased_{content_id}")]]
+            reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+            
+            if file_type == "photo":
+                await callback.message.bot.send_photo(
+                    chat_id=callback.message.chat.id,
+                    photo=file_id,
+                    caption=caption,
+                    reply_markup=reply_markup
                 )
-                
-                for content in batch:
-                    file_id = content[5]
-                    file_type = content[6]
-                    
-                    if file_type == "photo":
-                        media_group.add_photo(media=file_id)
-                    elif file_type == "video":
-                        media_group.add_video(media=file_id)
-                
-                if len(media_group.build()) > 0:
-                    await callback.message.bot.send_media_group(
-                        chat_id=callback.message.chat.id,
-                        media=media_group.build()
-                    )
+            elif file_type == "video":
+                await callback.message.bot.send_video(
+                    chat_id=callback.message.chat.id,
+                    video=file_id,
+                    caption=caption,
+                    reply_markup=reply_markup
+                )
                     
     except Exception as e:
-        # Fallback a mensajes individuales si falla el álbum
+        # Fallback a mensajes individuales si falla el envío
         await send_content_album_fallback(callback, purchased_content, caption_prefix)
 
 async def send_content_album_fallback(callback: CallbackQuery, content_list: list, caption_prefix: str):
