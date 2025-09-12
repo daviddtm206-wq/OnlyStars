@@ -182,21 +182,21 @@ async def show_catalog_content(message, creator_id: int, content_index: int, edi
     # Fila de navegación
     nav_buttons = []
     if content_index > 0:
-        nav_buttons.append(InlineKeyboardButton("⬅️ Anterior", callback_data=f"catalog_nav_{creator_id}_{content_index-1}"))
+        nav_buttons.append(InlineKeyboardButton(text="⬅️ Anterior", callback_data=f"catalog_nav_{creator_id}_{content_index-1}"))
     if content_index < len(ppv_content) - 1:
-        nav_buttons.append(InlineKeyboardButton("Siguiente ➡️", callback_data=f"catalog_nav_{creator_id}_{content_index+1}"))
+        nav_buttons.append(InlineKeyboardButton(text="Siguiente ➡️", callback_data=f"catalog_nav_{creator_id}_{content_index+1}"))
     
     if nav_buttons:
         keyboard.append(nav_buttons)
     
     # Botón de compra/ver contenido
     if already_purchased:
-        keyboard.append([InlineKeyboardButton("👁️ Ver contenido", callback_data=f"show_purchased_{content_id}")])
+        keyboard.append([InlineKeyboardButton(text="👁️ Ver contenido", callback_data=f"show_purchased_{content_id}")])
     else:
-        keyboard.append([InlineKeyboardButton(f"🛒 Comprar por {price_stars} ⭐️", callback_data=f"buy_catalog_ppv_{content_id}")])
+        keyboard.append([InlineKeyboardButton(text=f"🛒 Comprar por {price_stars} ⭐️", callback_data=f"buy_catalog_ppv_{content_id}")])
     
     # Botón para volver a la lista de catálogos
-    keyboard.append([InlineKeyboardButton("📚 Volver a mis catálogos", callback_data="back_to_catalogs")])
+    keyboard.append([InlineKeyboardButton(text="📚 Volver a mis catálogos", callback_data="back_to_catalogs")])
     
     reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
     
