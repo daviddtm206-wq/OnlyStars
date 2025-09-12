@@ -43,6 +43,19 @@ async def subscribe_to_creator(message: Message):
 
     subscription_price_stars = creator[5]  # Índice 5 = subscription_price en la DB
 
+    # Si la suscripción es gratuita (0 estrellas), crear suscripción directamente
+    if subscription_price_stars == 0:
+        expires_at = int(time.time()) + 30 * 24 * 60 * 60
+        add_subscriber(message.from_user.id, creator_id, expires_at)
+        
+        await message.answer(
+            f"🎉 <b>¡Suscripción GRATUITA exitosa a {creator[3]}!</b>\n\n"
+            f"✅ ¡Ya tienes acceso al contenido exclusivo por 30 días!\n"
+            f"💡 Usa /mis_catalogos para ver su catálogo privado."
+        )
+        return
+
+    # Si tiene costo, enviar factura normal
     await message.bot.send_invoice(
         chat_id=message.chat.id,
         title=f"Suscripción a {creator[3]}",

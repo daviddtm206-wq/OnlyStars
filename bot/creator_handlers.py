@@ -67,7 +67,8 @@ async def process_description(message: Message, state: FSMContext):
     await state.update_data(description=message.text)
     await message.answer(
         "💰 Paso 3/5: ¿Cuál será el precio de tu suscripción mensual? (en ⭐️ Stars)\n"
-        "Ejemplo: 100"
+        "💡 Puedes poner 0 para suscripciones gratuitas\n"
+        "Ejemplo: 100 (o 0 para gratis)"
     )
     await state.set_state(CreatorRegistration.waiting_for_price)
 
@@ -75,10 +76,10 @@ async def process_description(message: Message, state: FSMContext):
 async def process_price(message: Message, state: FSMContext):
     try:
         price = int(message.text)
-        if price <= 0:
+        if price < 0:
             raise ValueError
     except ValueError:
-        await message.answer("❌ Por favor ingresa un número válido mayor a 0:")
+        await message.answer("❌ Por favor ingresa un número válido (0 o mayor):")
         return
     
     await state.update_data(subscription_price=price)
@@ -425,7 +426,8 @@ async def edit_price_start(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         "💰 <b>CAMBIAR PRECIO DE SUSCRIPCIÓN</b>\n\n"
         "Escribe el nuevo precio mensual en ⭐️ Stars:\n"
-        "Ejemplo: 150"
+        "💡 Puedes poner 0 para suscripciones gratuitas\n"
+        "Ejemplo: 150 (o 0 para gratis)"
     )
     await state.set_state(ProfileEdit.waiting_for_new_price)
 
@@ -433,20 +435,28 @@ async def edit_price_start(callback: CallbackQuery, state: FSMContext):
 async def process_new_price(message: Message, state: FSMContext):
     try:
         price = int(message.text)
-        if price <= 0:
+        if price < 0:
             raise ValueError
     except ValueError:
-        await message.answer("❌ Por favor ingresa un número válido mayor a 0:")
+        await message.answer("❌ Por favor ingresa un número válido (0 o mayor):")
         return
     
     update_creator_subscription_price(message.from_user.id, price)
     
-    await message.answer(
-        f"✅ <b>Precio de suscripción actualizado</b>\n\n"
-        f"💰 Nuevo precio: {price} ⭐️\n\n"
-        f"Los nuevos suscriptores pagarán este precio.\n"
-        f"Puedes ver tu perfil actualizado con /mi_perfil"
-    )
+    if price == 0:
+        await message.answer(
+            f"✅ <b>Precio de suscripción actualizado</b>\n\n"
+            f"🆓 Nuevo precio: GRATIS (0 ⭐️)\n\n"
+            f"Los nuevos suscriptores podrán suscribirse gratis.\n"
+            f"Puedes ver tu perfil actualizado con /mi_perfil"
+        )
+    else:
+        await message.answer(
+            f"✅ <b>Precio de suscripción actualizado</b>\n\n"
+            f"💰 Nuevo precio: {price} ⭐️\n\n"
+            f"Los nuevos suscriptores pagarán este precio.\n"
+            f"Puedes ver tu perfil actualizado con /mi_perfil"
+        )
     await state.clear()
 
 @router.callback_query(F.data == "edit_photo")

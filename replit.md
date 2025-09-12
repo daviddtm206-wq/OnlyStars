@@ -12,6 +12,9 @@ This is a Telegram bot that allows creators to sell exclusive content using Tele
 - Added FSM (Finite State Machine) for interactive flows
 - Enhanced payment system to handle subscriptions, PPV, and tips
 - **NEW**: Added profile editing functionality for creators with /editar_perfil command
+- **September 12, 2025**: Added complete catalog system for creators with /mis_catalogos command
+- **NEW**: Implemented personalized PPV catalogs per creator with professional channel-like interface
+- **NEW**: Added support for FREE subscriptions (0 ⭐️ stars) for creators
 
 ## Project Architecture
 - **Language**: Python 3.11
@@ -36,9 +39,10 @@ requirements.txt         # Python dependencies
 ```
 
 ### Key Features
-- **Creator Registration**: Interactive flow for creator onboarding
-- **Monthly Subscriptions**: Using Telegram Stars with automatic billing
-- **PPV Content**: Pay-per-view photos and videos
+- **Creator Registration**: Interactive flow for creator onboarding (supports FREE subscriptions)
+- **Monthly Subscriptions**: Using Telegram Stars with automatic billing or FREE (0 ⭐)
+- **Private Catalogs**: Personalized PPV catalogs per creator (channel-like interface)
+- **PPV Content**: Pay-per-view photos and videos with secure paywall
 - **Tips System**: Direct tips to creators
 - **Admin Panel**: Full administrative controls and statistics
 - **Payment Processing**: Automatic commission calculation (20%)
@@ -78,7 +82,8 @@ requirements.txt         # Python dependencies
 
 ### For Fans:
 - `/explorar_creadores` - Browse available creators
-- `/suscribirme_a <creator_id>` - Subscribe to a creator
+- `/suscribirme_a <creator_id>` - Subscribe to a creator (free or paid)
+- `/mis_catalogos` - View exclusive catalogs from subscribed creators
 - `/comprar_ppv <content_id>` - Purchase PPV content
 - `/enviar_propina <creator_id> <amount>` - Send tips
 
