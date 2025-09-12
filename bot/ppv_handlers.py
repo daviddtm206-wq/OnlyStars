@@ -36,8 +36,8 @@ async def buy_ppv_content(message: Message):
         return
     
     # Manejo flexible de la estructura de datos para compatibilidad
-    if len(content) >= 8:
-        content_id, creator_id, title, description, price_stars, file_id, file_type, album_type = content[:8]
+    if len(content) >= 9:
+        content_id, creator_id, title, description, price_stars, file_id, file_type, created_at, album_type = content[:9]
     else:
         content_id, creator_id, title, description, price_stars, file_id, file_type = content[:7]
         album_type = 'single'  # Compatibilidad con registros antiguos
@@ -255,8 +255,8 @@ async def process_successful_payment(message: Message):
             return
         
         # Manejo flexible de la estructura de datos para compatibilidad
-        if len(content) >= 8:
-            _, creator_id, title, description, price_stars, file_id, file_type, album_type = content[:8]
+        if len(content) >= 9:
+            _, creator_id, title, description, price_stars, file_id, file_type, created_at, album_type = content[:9]
         else:
             _, creator_id, title, description, price_stars, file_id, file_type = content[:7]
             album_type = 'single'  # Compatibilidad con registros antiguos
