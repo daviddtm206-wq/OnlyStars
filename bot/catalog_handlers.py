@@ -6,10 +6,61 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from database import (get_creator_by_id, is_user_banned, get_active_subscriptions, 
-                     get_ppv_by_creator, has_purchased_ppv, get_ppv_content, get_ppv_album_items)
+                     get_ppv_by_creator, has_purchased_ppv, get_ppv_content, get_ppv_album_items,
+                     add_ppv_purchase, add_transaction, update_balance)
 import time
+import os
+
+COMMISSION_PERCENTAGE = int(os.getenv("COMMISSION_PERCENTAGE", 20))
 
 router = Router()
+
+# Handler para procesar compras de Paid Media
+@router.message(F.successful_payment)
+async def process_paid_media_purchase(message: Message):
+    """Procesa compras exitosas de Paid Media desde el catálogo"""
+    # Este handler complementa al de ppv_handlers.py para Paid Media
+    # Las compras por factura (/comprar_ppv) se siguen manejando en ppv_handlers.py
+    
+    # Verificar si hay información de Paid Media tracking
+    if hasattr(message.bot, '_paid_media_tracking'):
+        # Buscar si este mensaje corresponde a una compra de Paid Media
+        # En un bot real, esto se haría consultando una tabla en DB
+        for message_id, tracking_info in message.bot._paid_media_tracking.items():
+            if tracking_info['buyer_id'] == message.from_user.id:
+                # Procesar la compra
+                content_id = tracking_info['content_id']
+                creator_id = tracking_info['creator_id']
+                price_stars = tracking_info['price_stars']
+                album_type = tracking_info['album_type']
+                
+                # Verificar si ya fue comprado (evitar duplicados)
+                if not has_purchased_ppv(message.from_user.id, content_id):
+                    # Registrar la compra
+                    add_ppv_purchase(message.from_user.id, content_id)
+                    
+                    # Calcular comisión y ganancia del creador
+                    commission = (price_stars * COMMISSION_PERCENTAGE) // 100
+                    creator_earnings = price_stars - commission
+                    
+                    # Actualizar balance del creador
+                    update_balance(creator_id, creator_earnings)
+                    
+                    # Registrar transacción
+                    add_transaction(message.from_user.id, creator_id, price_stars, commission, "ppv")
+                    
+                    # Confirmar compra al usuario
+                    content_type = "📁 Álbum" if album_type == 'album' else "📸 Contenido"
+                    await message.answer(
+                        f"✅ <b>¡Compra exitosa via Paid Media!</b>\n\n"
+                        f"💰 Pagaste: {price_stars} ⭐️\n"
+                        f"📦 {content_type} desbloqueado\n\n"
+                        f"💡 Ahora puedes ver este contenido en /mis_catalogos"
+                    )
+                
+                # Limpiar tracking
+                del message.bot._paid_media_tracking[message_id]
+                break
 
 class CatalogStates(StatesGroup):
     viewing_catalog = State()
@@ -239,12 +290,27 @@ async def send_paid_content_individual(callback: CallbackQuery, paid_content: li
             if paid_media_items and price_stars > 0:
                 caption = description if description and description.strip() else None
                 
-                await callback.message.bot.send_paid_media(
+                # Enviar Paid Media y guardar message_id para rastrear compras
+                paid_message = await callback.message.bot.send_paid_media(
                     chat_id=callback.message.chat.id,
                     star_count=price_stars,
                     media=paid_media_items,
                     caption=caption
                 )
+                
+                # Guardar mapping para procesar compras posteriores
+                # (En un bot real, esto se guardaría en una tabla temporal en DB)
+                # Por simplicidad, lo almacenamos en memoria por ahora
+                if not hasattr(callback.message.bot, '_paid_media_tracking'):
+                    callback.message.bot._paid_media_tracking = {}
+                
+                callback.message.bot._paid_media_tracking[paid_message.message_id] = {
+                    'content_id': content_id,
+                    'creator_id': content[1],  # creator_id
+                    'buyer_id': callback.from_user.id,
+                    'price_stars': price_stars,
+                    'album_type': album_type
+                }
                 
     except ImportError:
         # Fallback: Si InputPaidMedia no está disponible, usar mensajes individuales con spoilers

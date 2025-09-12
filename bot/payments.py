@@ -75,7 +75,13 @@ async def subscribe_to_creator(message: Message):
 
 @router.pre_checkout_query()
 async def pre_checkout_handler(pre_checkout_query: PreCheckoutQuery):
-    await pre_checkout_query.answer(ok=True)
+    """Handler específico para suscripciones - PPV se maneja en ppv_handlers.py"""
+    payload = pre_checkout_query.invoice_payload
+    
+    # Solo manejar suscripciones, dejar PPV y propinas a ppv_handlers.py
+    if payload.startswith("sub_"):
+        await pre_checkout_query.answer(ok=True)
+    # No hacer nada si es PPV o propina - lo maneja ppv_handlers.py
 
 @router.message(F.successful_payment)
 async def successful_payment_handler(message: Message):
