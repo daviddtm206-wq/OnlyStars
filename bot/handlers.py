@@ -4,16 +4,19 @@ from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from database import init_db, get_creator_by_id, is_user_banned
-from keyboards import get_main_keyboard, get_fan_keyboard
+from keyboards import get_main_keyboard, get_fan_keyboard, get_main_menu
+from nav_states import MenuState, NavigationManager
 from payments import router as payments_router
 from creator_handlers import router as creator_router
 from admin_handlers import router as admin_router
 from ppv_handlers import router as ppv_router
 from catalog_handlers import router as catalog_router
+from nav_handlers import router as nav_router
 
 router = Router()
 
 # Include all handlers
+router.include_router(nav_router)  # Sistema de navegación jerárquica
 router.include_router(payments_router)
 router.include_router(creator_router)
 router.include_router(admin_router)
@@ -21,19 +24,23 @@ router.include_router(ppv_router)
 router.include_router(catalog_router)
 
 @router.message(Command("start"))
-async def cmd_start(message: Message):
+async def cmd_start(message: Message, state: FSMContext):
     if is_user_banned(message.from_user.id):
         await message.answer("❌ Tu cuenta está baneada y no puedes usar el bot.")
         return
     
+    # Resetear navegación al menú principal
+    await NavigationManager.reset_to_main(state)
+    
     creator = get_creator_by_id(message.from_user.id)
-    keyboard = get_main_keyboard(message.from_user.id, message.from_user.username)
+    username = message.from_user.username
+    keyboard = get_main_menu(username)
     
     if creator:
         welcome_text = (
             f"🌟 <b>¡Bienvenido de vuelta, {creator[3]}!</b> ⭐️\n\n"
             f"🎨 <b>Panel de Creador Activo</b>\n"
-            f"Usa los botones de abajo para gestionar tu cuenta.\n\n"
+            f"Usa los botones de abajo para navegar por las funciones disponibles.\n\n"
             f"💎 <b>Pagos seguros con Telegram Stars</b> ⭐️"
         )
     else:
@@ -42,7 +49,8 @@ async def cmd_start(message: Message):
             "La primera plataforma de contenido exclusivo usando Telegram Stars\n\n"
             "👥 <b>Explora creadores</b> y accede a contenido exclusivo\n"
             "🎨 <b>Conviértete en creador</b> y monetiza tu contenido\n\n"
-            "💎 <b>Pagos seguros con Telegram Stars</b> ⭐️"
+            "💎 <b>Pagos seguros con Telegram Stars</b> ⭐️\n\n"
+            "Usa los botones del menú para navegar por las opciones disponibles."
         )
     
     await message.answer(welcome_text, reply_markup=keyboard)
