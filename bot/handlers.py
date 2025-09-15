@@ -155,7 +155,7 @@ async def keyboard_view_as_fan(message: Message):
     )
 
 @router.message(F.text == "🎨 Volver a Creador")
-async def keyboard_back_to_creator(message: Message):
+async def keyboard_back_to_creator(message: Message, state: FSMContext):
     if is_user_banned(message.from_user.id):
         await message.answer("❌ Tu cuenta está baneada.")
         return
@@ -164,8 +164,12 @@ async def keyboard_back_to_creator(message: Message):
     if not creator:
         await message.answer("❌ No estás registrado como creador.")
         return
-        
-    keyboard = get_main_keyboard(message.from_user.id, message.from_user.username)
+    
+    # Resetear navegación al menú principal usando el nuevo sistema
+    await NavigationManager.reset_to_main(state)
+    username = message.from_user.username
+    keyboard = get_main_menu(username)
+    
     await message.answer(
         f"🎨 <b>PANEL DE CREADOR RESTAURADO</b>\n\n"
         f"Bienvenido de vuelta, {creator[3]}!\n"
