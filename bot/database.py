@@ -337,3 +337,57 @@ def get_ppv_by_creator(creator_id):
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+def delete_ppv_content(content_id, creator_id):
+    """Elimina contenido PPV y todos sus elementos de álbum asociados"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    try:
+        # Verificar que el contenido pertenece al creador
+        cursor.execute("SELECT creator_id FROM ppv_content WHERE id = ?", (content_id,))
+        result = cursor.fetchone()
+        
+        if not result or result[0] != creator_id:
+            return False, "Contenido no encontrado o no tienes permisos para eliminarlo"
+        
+        # Eliminar elementos del álbum si los hay (la FK con CASCADE se encarga de esto)
+        cursor.execute("DELETE FROM ppv_album_items WHERE album_id = ?", (content_id,))
+        
+        # Eliminar compras asociadas
+        cursor.execute("DELETE FROM ppv_purchases WHERE content_id = ?", (content_id,))
+        
+        # Eliminar el contenido principal
+        cursor.execute("DELETE FROM ppv_content WHERE id = ?", (content_id,))
+        
+        if cursor.rowcount > 0:
+            conn.commit()
+            return True, "Contenido eliminado exitosamente"
+        else:
+            return False, "No se pudo eliminar el contenido"
+            
+    except Exception as e:
+        conn.rollback()
+        return False, f"Error al eliminar: {str(e)}"
+    finally:
+        conn.close()
+
+def get_ppv_content_with_stats(creator_id):
+    """Obtiene contenido PPV con estadísticas de compras"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT 
+            p.*,
+            COUNT(pp.id) as purchase_count,
+            COALESCE(SUM(pp.content_id), 0) as total_sales
+        FROM ppv_content p
+        LEFT JOIN ppv_purchases pp ON p.id = pp.content_id
+        WHERE p.creator_id = ?
+        GROUP BY p.id
+        ORDER BY p.created_at DESC
+    ''', (creator_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
