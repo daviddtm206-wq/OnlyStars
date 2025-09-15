@@ -682,7 +682,9 @@ async def handle_subscribe_button(callback: CallbackQuery):
             expires_at = int(time.time()) + (30 * 24 * 60 * 60)  # 30 días
             add_subscriber(callback.from_user.id, creator_id, expires_at)
             
-            await callback.message.edit_text(
+            # Borrar mensaje anterior y enviar uno nuevo
+            await callback.message.delete()
+            await callback.message.answer(
                 f"🎉 <b>¡Suscripción exitosa!</b>\n\n"
                 f"✨ Te has suscrito GRATIS a <b>{display_name}</b>\n"
                 f"📅 Tu suscripción es válida por 30 días\n\n"
@@ -695,7 +697,9 @@ async def handle_subscribe_button(callback: CallbackQuery):
         # Suscripción de pago - mostrar confirmación
         keyboard = get_subscription_confirmation_keyboard(creator_id, subscription_price)
         
-        await callback.message.edit_text(
+        # Borrar mensaje anterior y enviar uno nuevo
+        await callback.message.delete()
+        await callback.message.answer(
             f"💎 <b>Confirmar Suscripción</b>\n\n"
             f"✨ Creador: <b>{display_name}</b>\n"
             f"💰 Precio: <b>{subscription_price} ⭐️</b>\n"
@@ -776,7 +780,9 @@ async def handle_view_profile(callback: CallbackQuery):
         [InlineKeyboardButton(text="⬅️ Volver a Explorar", callback_data="back_to_explore")]
     ])
     
-    await callback.message.edit_text(profile_text, reply_markup=keyboard)
+    # Borrar mensaje anterior y enviar uno nuevo
+    await callback.message.delete()
+    await callback.message.answer(profile_text, reply_markup=keyboard)
 
 @router.callback_query(F.data.startswith("creator_next_"))
 async def handle_next_creator(callback: CallbackQuery):
@@ -837,11 +843,22 @@ async def show_creator_card_callback(callback: CallbackQuery, creators: list, pa
     keyboard = get_creator_card_keyboard(user_id, page, len(creators))
     
     try:
-        # Editar el mensaje existente
-        await callback.message.edit_text(
-            text=card_text,
-            reply_markup=keyboard
-        )
+        # Borrar mensaje anterior y enviar uno nuevo
+        await callback.message.delete()
+        
+        # Si hay foto de perfil, enviarla con el mensaje
+        if photo_url:
+            await callback.message.answer_photo(
+                photo=photo_url,
+                caption=card_text,
+                reply_markup=keyboard
+            )
+        else:
+            # Si no hay foto, enviar solo el texto
+            await callback.message.answer(
+                text=card_text,
+                reply_markup=keyboard
+            )
         await callback.answer()
     except Exception as e:
         await callback.answer("❌ Error al cargar creador.", show_alert=True)
