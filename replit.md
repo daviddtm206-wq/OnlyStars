@@ -4,6 +4,13 @@
 This is a Telegram bot that allows creators to sell exclusive content using Telegram Stars (⭐️). The platform supports monthly subscriptions, pay-per-view content, tips, and includes an admin panel with a 20% platform commission.
 
 ## Recent Changes
+- **September 15, 2025**: Fresh clone imported and fully configured for Replit environment
+- ✅ Moved sensitive credentials (BOT_TOKEN, ADMIN_USERNAME) to secure Replit Secrets
+- ✅ Fixed requirements.txt to remove duplicates and ensure deterministic deployments
+- ✅ Added BOT_TOKEN validation with fail-fast behavior for better error handling
+- ✅ Configured database as runtime artifact (removed from version control)
+- ✅ Set up VM deployment target for always-on bot functionality
+- ✅ Validated all dependencies and bot polling functionality
 - September 9, 2025: Successfully imported from GitHub and set up for Replit environment
 - Fixed import issues for proper module resolution
 - Integrated payment router with main handlers
@@ -59,14 +66,19 @@ requirements.txt         # Python dependencies
 - MIN_WITHDRAWAL: 1000 stars
 - WITHDRAWAL_MODE: REAL
 
+## User Preferences
+- **Language**: Always respond in Spanish (Siempre responder en español)
+
 ## Current State
-✅ Bot is running and connected to Telegram (@Prueba2408bot)
-✅ All dependencies installed and configured
-✅ Database initialization working
-✅ Payment system integrated
-✅ Deployment configured for production
+✅ Bot is running and connected to Telegram (@Onlyfans2408bot)
+✅ Python 3.11 installed with aiogram 3.12.0
+✅ All dependencies installed and configured (requirements.txt cleaned)
+✅ Database initialization working (SQLite runtime creation)
+✅ Payment system integrated with Telegram Stars
+✅ Deployment configured for production (VM target)
 ✅ Secrets properly secured in Replit environment
-✅ Database path fixed for consistency
+✅ BOT_TOKEN validation and error handling implemented
+✅ Workflow running successfully with proper polling
 
 ## Available Commands
 
