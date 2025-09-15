@@ -33,7 +33,8 @@ async def cmd_start(message: Message):
         "• /convertirme_en_creador - Registrarse como creador\n"
         "• /mi_perfil - Ver mi perfil y estadísticas\n"
         "• /balance - Ver balance y retirar ganancias\n"
-        "• /crear_contenido_ppv - Crear contenido pago por ver\n\n"
+        "• /crear_contenido_ppv - Crear contenido pago por ver\n"
+        "• /mi_catalogo - Gestionar mi catálogo\n\n"
         "💎 <b>Pagos seguros con Telegram Stars</b> ⭐️"
     )
 
@@ -50,7 +51,8 @@ async def cmd_help(message: Message):
         "• /mi_perfil - Ver perfil\n"
         "• /balance - Ver saldo\n"
         "• /retirar &lt;monto&gt; - Retirar ganancias\n"
-        "• /crear_contenido_ppv - Crear contenido PPV\n\n"
+        "• /crear_contenido_ppv - Crear contenido PPV\n"
+        "• /mi_catalogo - Gestionar mi catálogo\n\n"
         "👥 <b>Para fans:</b>\n"
         "• /explorar_creadores - Ver creadores\n"
         "• /suscribirme_a &lt;ID&gt; - Suscribirse\n"
@@ -62,3 +64,4 @@ async def cmd_help(message: Message):
 
 # Inicializar base de datos al cargar
 init_db()
+
