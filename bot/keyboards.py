@@ -112,6 +112,26 @@ def get_admin_menu() -> ReplyKeyboardMarkup:
         one_time_keyboard=False
     )
 
+def get_creator_onboarding_menu() -> ReplyKeyboardMarkup:
+    """Menú para usuarios que quieren convertirse en creadores"""
+    keyboard = [
+        [
+            KeyboardButton(text="✅ Registrarme como Creador")
+        ],
+        [
+            KeyboardButton(text="ℹ️ Más Información")
+        ],
+        [
+            KeyboardButton(text="⬅️ Volver")
+        ]
+    ]
+    
+    return ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
 # ==================== FUNCIONES LEGACY (Mantener compatibilidad) ====================
 
 def get_main_keyboard(user_id: int, username: str = None) -> ReplyKeyboardMarkup:

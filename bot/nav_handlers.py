@@ -8,7 +8,7 @@ from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from database import get_creator_by_id, is_user_banned
 from nav_states import MenuState, NavigationManager
-from keyboards import get_main_menu, get_creator_menu, get_explore_menu, get_admin_menu, is_admin_user
+from keyboards import get_main_menu, get_creator_menu, get_explore_menu, get_admin_menu, get_creator_onboarding_menu, is_admin_user
 
 router = Router()
 
@@ -23,13 +23,22 @@ async def show_menu(state: MenuState, message: Message, context: FSMContext):
     elif state == MenuState.CREATOR:
         creator = get_creator_by_id(message.from_user.id)
         if not creator:
-            await message.answer("❌ Primero debes registrarte como creador.")
-            await NavigationManager.reset_to_main(context)
-            await show_menu(MenuState.MAIN, message, context)
-            return
-        
-        text = f"🎨 <b>PANEL DE CREADOR</b>\n\n¡Hola {creator[3]}! ¿Qué deseas hacer?"
-        keyboard = get_creator_menu()
+            # Mostrar panel de onboarding en lugar de redirigir
+            text = (
+                "🎨 <b>¡CONVIÉRTETE EN CREADOR!</b>\n\n"
+                "Como creador podrás:\n"
+                "• 📸 Subir contenido exclusivo PPV\n"
+                "• 💰 Establecer suscripciones mensuales\n"
+                "• 📊 Gestionar tus catálogos\n"
+                "• 💎 Ganar dinero con tus fans\n\n"
+                "💫 La comisión de la plataforma es del 20%\n"
+                "⭐️ Los pagos se procesan en Telegram Stars\n\n"
+                "🚀 <b>¿Estás listo para empezar?</b>"
+            )
+            keyboard = get_creator_onboarding_menu()
+        else:
+            text = f"🎨 <b>PANEL DE CREADOR</b>\n\n¡Hola {creator[3]}! ¿Qué deseas hacer?"
+            keyboard = get_creator_menu()
         
     elif state == MenuState.EXPLORE:
         text = "🔍 <b>EXPLORAR CREADORES</b>\n\nDescubre contenido exclusivo y conecta con tus creadores favoritos"
@@ -83,20 +92,9 @@ async def handle_ser_creador(message: Message, state: FSMContext):
         await NavigationManager.push_state(MenuState.CREATOR, state)
         await show_menu(MenuState.CREATOR, message, state)
     else:
-        # No es creador, mostrar opciones para convertirse
-        text = (
-            "🎨 <b>¡CONVIÉRTETE EN CREADOR!</b>\n\n"
-            "Como creador podrás:\n"
-            "• 📸 Subir contenido exclusivo PPV\n"
-            "• 💰 Establecer suscripciones mensuales\n"
-            "• 📊 Gestionar tus catálogos\n"
-            "• 💎 Ganar dinero con tus fans\n\n"
-            "💫 La comisión de la plataforma es del 20%\n"
-            "⭐️ Los pagos se procesan en Telegram Stars\n\n"
-            "🚀 <b>¿Estás listo para empezar?</b>\n"
-            "Usa /convertirme_en_creador para registrarte"
-        )
-        await message.answer(text)
+        # No es creador, pero navegamos al menú de creador que mostrará la información apropiada
+        await NavigationManager.push_state(MenuState.CREATOR, state)
+        await show_menu(MenuState.CREATOR, message, state)
 
 @router.message(F.text == "🔍 Explorar Creadores")
 async def handle_explorar_creadores(message: Message, state: FSMContext):
@@ -105,9 +103,17 @@ async def handle_explorar_creadores(message: Message, state: FSMContext):
         await message.answer("❌ Tu cuenta está baneada y no puedes usar el bot.")
         return
     
-    # Mostrar directamente los creadores disponibles (sin navegar al submenú)
-    from creator_handlers import explore_creators
-    await explore_creators(message)
+    # Verificar en qué menú estamos
+    current_state = await NavigationManager.get_current_state(state)
+    
+    if current_state == MenuState.EXPLORE:
+        # Ya estamos en el submenú de explorar, ejecutar la función
+        from creator_handlers import explore_creators
+        await explore_creators(message)
+    else:
+        # Estamos en el menú principal, navegar al submenú de explorar
+        await NavigationManager.push_state(MenuState.EXPLORE, state)
+        await show_menu(MenuState.EXPLORE, message, state)
 
 @router.message(F.text == "ℹ️ Ayuda")
 async def handle_ayuda(message: Message, state: FSMContext):
@@ -235,6 +241,46 @@ async def handle_admin_config(message: Message, state: FSMContext):
         "• <code>/config_retiro_min &lt;cantidad&gt;</code>\n"
         "• <code>/reiniciar_base_datos</code> (¡CUIDADO!)\n\n"
         "⚠️ <b>Los cambios requieren reiniciar el bot</b>"
+    )
+
+# ==================== HANDLERS DEL MENÚ CREATOR ONBOARDING ====================
+
+@router.message(F.text == "✅ Registrarme como Creador")
+async def handle_registrar_creador(message: Message, state: FSMContext):
+    """Manejar selección de 'Registrarme como Creador'"""
+    if is_user_banned(message.from_user.id):
+        await message.answer("❌ Tu cuenta está baneada y no puedes usar el bot.")
+        return
+    
+    # Llamar al comando de registro de creador
+    await message.answer(
+        "🚀 <b>¡PERFECTO!</b>\n\n"
+        "Para completar tu registro como creador, usa el comando:\n"
+        "<code>/convertirme_en_creador</code>\n\n"
+        "Este comando te guiará paso a paso por el proceso de registro."
+    )
+
+@router.message(F.text == "ℹ️ Más Información")
+async def handle_mas_informacion_creador(message: Message, state: FSMContext):
+    """Manejar selección de 'Más Información' sobre ser creador"""
+    await message.answer(
+        "📋 <b>INFORMACIÓN DETALLADA PARA CREADORES</b>\n\n"
+        "💰 <b>Ganancias:</b>\n"
+        "• Conservas el 80% de todas las ventas\n"
+        "• Plataforma retiene 20% de comisión\n"
+        "• Retiro mínimo: 1000 ⭐️ (≈ $13 USD)\n\n"
+        "📊 <b>Tipos de contenido:</b>\n"
+        "• Suscripciones mensuales (incluso GRATIS)\n"
+        "• Contenido PPV (pago por ver)\n"
+        "• Propinas de tus fans\n\n"
+        "⭐️ <b>Pagos seguros con Telegram Stars</b>\n"
+        "• Procesamiento automático\n"
+        "• Sin necesidad de cuentas bancarias\n"
+        "• Conversión directa a dinero real\n\n"
+        "🛡️ <b>Protección:</b>\n"
+        "• Contenido protegido contra piratería\n"
+        "• Sistema de moderación activo\n"
+        "• Soporte técnico 24/7"
     )
 
 # ==================== HANDLER PARA VOLVER ====================
