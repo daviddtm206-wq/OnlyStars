@@ -81,6 +81,8 @@ async def show_menu(state: MenuState, message: Message, context: FSMContext):
 @router.message(F.text == "🎨 Ser Creador")
 async def handle_ser_creador(message: Message, state: FSMContext):
     """Manejar selección de 'Ser Creador'"""
+    print(f"🚀 DEBUG: Handler 'Ser Creador' ejecutado por usuario {message.from_user.id}")
+    
     if is_user_banned(message.from_user.id):
         await message.answer("❌ Tu cuenta está baneada y no puedes usar el bot.")
         return
@@ -89,29 +91,36 @@ async def handle_ser_creador(message: Message, state: FSMContext):
     
     if creator:
         # Ya es creador, mostrar menú de creador
+        print(f"🚀 DEBUG: Usuario {message.from_user.id} es creador, navegando a CREATOR")
         await NavigationManager.push_state(MenuState.CREATOR, state)
         await show_menu(MenuState.CREATOR, message, state)
     else:
         # No es creador, pero navegamos al menú de creador que mostrará la información apropiada
+        print(f"🚀 DEBUG: Usuario {message.from_user.id} NO es creador, navegando a CREATOR onboarding")
         await NavigationManager.push_state(MenuState.CREATOR, state)
         await show_menu(MenuState.CREATOR, message, state)
 
 @router.message(F.text == "🔍 Explorar Creadores")
 async def handle_explorar_creadores(message: Message, state: FSMContext):
     """Manejar selección de 'Explorar Creadores'"""
+    print(f"🚀 DEBUG: Handler 'Explorar Creadores' ejecutado por usuario {message.from_user.id}")
+    
     if is_user_banned(message.from_user.id):
         await message.answer("❌ Tu cuenta está baneada y no puedes usar el bot.")
         return
     
     # Verificar en qué menú estamos
     current_state = await NavigationManager.get_current_state(state)
+    print(f"🚀 DEBUG: Estado actual: {current_state}")
     
     if current_state == MenuState.EXPLORE:
         # Ya estamos en el submenú de explorar, ejecutar la función
+        print(f"🚀 DEBUG: Ya en EXPLORE, ejecutando explore_creators")
         from creator_handlers import explore_creators
         await explore_creators(message)
     else:
         # Estamos en el menú principal, navegar al submenú de explorar
+        print(f"🚀 DEBUG: Navegando de {current_state} a EXPLORE")
         await NavigationManager.push_state(MenuState.EXPLORE, state)
         await show_menu(MenuState.EXPLORE, message, state)
 

@@ -29,6 +29,9 @@ async def cmd_start(message: Message, state: FSMContext):
         await message.answer("❌ Tu cuenta está baneada y no puedes usar el bot.")
         return
     
+    # LIMPIAR COMPLETAMENTE el estado FSM para evitar conflictos
+    await state.clear()
+    
     # Resetear navegación al menú principal
     await NavigationManager.reset_to_main(state)
     
@@ -53,6 +56,9 @@ async def cmd_start(message: Message, state: FSMContext):
             "Usa los botones del menú para navegar por las opciones disponibles."
         )
     
+    # Primero remover teclado anterior, luego enviar el nuevo
+    from aiogram.types import ReplyKeyboardRemove
+    await message.answer("🔄 Actualizando menú...", reply_markup=ReplyKeyboardRemove())
     await message.answer(welcome_text, reply_markup=keyboard)
 
 # HANDLERS PARA BOTONES DEL TECLADO (solo los no manejados por navegación jerárquica)
