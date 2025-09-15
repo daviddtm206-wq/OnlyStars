@@ -258,16 +258,24 @@ async def handle_admin_config(message: Message, state: FSMContext):
 async def handle_registrar_creador(message: Message, state: FSMContext):
     """Manejar selección de 'Registrarme como Creador'"""
     if is_user_banned(message.from_user.id):
-        await message.answer("❌ Tu cuenta está baneada y no puedes usar el bot.")
+        await message.answer("❌ Tu cuenta está baneada y no puedes registrarte como creador.")
         return
     
-    # Llamar al comando de registro de creador
+    creator = get_creator_by_id(message.from_user.id)
+    if creator:
+        await message.answer("✅ Ya estás registrado como creador. Usa el menú para gestionar tu perfil.")
+        return
+    
+    # Iniciar el flujo de registro directamente
+    from creator_handlers import CreatorRegistration
     await message.answer(
-        "🚀 <b>¡PERFECTO!</b>\n\n"
-        "Para completar tu registro como creador, usa el comando:\n"
-        "<code>/convertirme_en_creador</code>\n\n"
-        "Este comando te guiará paso a paso por el proceso de registro."
+        "🎨 <b>¡PERFECTO! INICIANDO REGISTRO</b>\n\n"
+        "Vamos a configurar tu perfil de creador paso a paso.\n\n"
+        "📝 <b>Paso 1 de 5: NOMBRE ARTÍSTICO</b>\n"
+        "¿Cuál es tu nombre artístico o cómo quieres que te conozcan tus fans?\n\n"
+        "💡 <i>Ejemplo: 'Sofia Creativa', 'El Chef Miguel', etc.</i>"
     )
+    await state.set_state(CreatorRegistration.waiting_for_name)
 
 @router.message(F.text == "ℹ️ Más Información")
 async def handle_mas_informacion_creador(message: Message, state: FSMContext):

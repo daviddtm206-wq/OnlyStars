@@ -102,65 +102,233 @@ async def start_creator_registration(message: Message, state: FSMContext):
 
 @router.message(CreatorRegistration.waiting_for_name)
 async def process_name(message: Message, state: FSMContext):
-    await state.update_data(display_name=message.text)
+    name = message.text.strip()
+    if len(name) < 2:
+        await message.answer("❌ El nombre debe tener al menos 2 caracteres. Inténtalo de nuevo:")
+        return
+    if len(name) > 50:
+        await message.answer("❌ El nombre es muy largo (máximo 50 caracteres). Inténtalo de nuevo:")
+        return
+        
+    await state.update_data(display_name=name)
+    
+    from keyboards import get_creator_name_confirmation_keyboard
     await message.answer(
-        "📝 Paso 2/5: Escribe una descripción de ti y tu contenido (máximo 200 caracteres):"
+        f"📝 <b>CONFIRMA TU NOMBRE ARTÍSTICO</b>\n\n"
+        f"Nombre elegido: <b>{name}</b>\n\n"
+        f"¿Es correcto este nombre? Será como te verán tus fans.",
+        reply_markup=get_creator_name_confirmation_keyboard()
     )
-    await state.set_state(CreatorRegistration.waiting_for_description)
 
 @router.message(CreatorRegistration.waiting_for_description)
 async def process_description(message: Message, state: FSMContext):
-    if len(message.text) > 200:
+    description = message.text.strip()
+    if len(description) > 200:
         await message.answer("❌ La descripción es muy larga. Máximo 200 caracteres. Inténtalo de nuevo:")
         return
+    if len(description) < 10:
+        await message.answer("❌ La descripción es muy corta. Mínimo 10 caracteres. Inténtalo de nuevo:")
+        return
     
-    await state.update_data(description=message.text)
+    await state.update_data(description=description)
+    
+    from keyboards import get_creator_description_confirmation_keyboard
     await message.answer(
-        "💰 Paso 3/5: ¿Cuál será el precio de tu suscripción mensual? (en ⭐️ Stars)\n"
-        "💡 Puedes poner 0 para suscripciones gratuitas\n"
-        "Ejemplo: 100 (o 0 para gratis)"
+        f"📝 <b>CONFIRMA TU DESCRIPCIÓN</b>\n\n"
+        f"Descripción: <i>{description}</i>\n\n"
+        f"¿Te gusta cómo se ve? Esto aparecerá en tu perfil público.",
+        reply_markup=get_creator_description_confirmation_keyboard()
     )
-    await state.set_state(CreatorRegistration.waiting_for_price)
 
+# El proceso de precio ahora se maneja con callbacks en lugar de mensaje directo
+# Esta función se mantiene para compatibilidad con precios personalizados
 @router.message(CreatorRegistration.waiting_for_price)
-async def process_price(message: Message, state: FSMContext):
+async def process_custom_price(message: Message, state: FSMContext):
     try:
         price = int(message.text)
         if price < 0:
             raise ValueError
+        if price > 10000:
+            await message.answer("❌ El precio máximo es 10,000 ⭐️. Inténtalo de nuevo:")
+            return
     except ValueError:
         await message.answer("❌ Por favor ingresa un número válido (0 o mayor):")
         return
     
     await state.update_data(subscription_price=price)
+    
+    from keyboards import get_creator_photo_keyboard
+    price_text = "GRATIS" if price == 0 else f"{price} ⭐️"
     await message.answer(
-        "📸 Paso 4/5: Envía tu foto de perfil (opcional). \n"
-        "Puedes enviar una imagen o escribir 'saltar' para omitir este paso."
+        f"✅ <b>PRECIO CONFIGURADO</b>\n\n"
+        f"Precio de suscripción: <b>{price_text}</b>\n\n"
+        f"📸 <b>Paso 4 de 5: FOTO DE PERFIL</b>\n"
+        f"Sube una foto para que tus fans te conozcan mejor.",
+        reply_markup=get_creator_photo_keyboard()
     )
     await state.set_state(CreatorRegistration.waiting_for_photo)
 
+# El manejo de foto ahora se hace principalmente con callbacks
+# Esta función maneja la subida directa de fotos
 @router.message(CreatorRegistration.waiting_for_photo)
-async def process_photo(message: Message, state: FSMContext):
-    photo_url = None
-    
+async def process_photo_upload(message: Message, state: FSMContext):
     if message.photo:
         photo_url = message.photo[-1].file_id
-    elif message.text and message.text.lower() != 'saltar':
-        await message.answer("❌ Por favor envía una imagen o escribe 'saltar':")
-        return
+        await state.update_data(photo_url=photo_url)
+        
+        from keyboards import get_creator_payout_keyboard
+        await message.answer(
+            f"✅ <b>FOTO GUARDADA</b>\n\n"
+            f"📸 Tu foto de perfil se ha guardado correctamente.\n\n"
+            f"💳 <b>Paso 5 de 5: MÉTODO DE PAGO</b>\n"
+            f"¿Cómo quieres recibir tus ganancias?",
+            reply_markup=get_creator_payout_keyboard()
+        )
+        await state.set_state(CreatorRegistration.waiting_for_payout)
+    else:
+        await message.answer(
+            "❌ Por favor envía una imagen válida o usa los botones del menú para saltar este paso."
+        )
+
+# ==================== CALLBACKS PARA REGISTRO CON BOTONES ====================
+
+@router.callback_query(F.data == "confirm_name")
+async def confirm_creator_name(callback: CallbackQuery, state: FSMContext):
+    """Confirmar nombre artístico y continuar al siguiente paso"""
+    await callback.answer()
+    await callback.message.edit_text(
+        "📝 <b>Paso 2 de 5: DESCRIPCIÓN</b>\n\n"
+        "Escribe una descripción de ti y tu contenido.\n\n"
+        "💡 <i>Ejemplo: 'Artista digital especializada en fanart de anime. Contenido exclusivo y tutoriales creativos.'</i>\n\n"
+        "Máximo 200 caracteres:"
+    )
+    await state.set_state(CreatorRegistration.waiting_for_description)
+
+@router.callback_query(F.data == "edit_name")
+async def edit_creator_name(callback: CallbackQuery, state: FSMContext):
+    """Volver a pedir el nombre artístico"""
+    await callback.answer()
+    await callback.message.edit_text(
+        "✏️ <b>Paso 1 de 5: NOMBRE ARTÍSTICO</b>\n\n"
+        "Escribe un nuevo nombre artístico:\n\n"
+        "💡 <i>Piensa en algo fácil de recordar y profesional</i>"
+    )
+    await state.set_state(CreatorRegistration.waiting_for_name)
+
+@router.callback_query(F.data == "confirm_description")
+async def confirm_creator_description(callback: CallbackQuery, state: FSMContext):
+    """Confirmar descripción y mostrar selección de precios"""
+    await callback.answer()
     
-    await state.update_data(photo_url=photo_url)
+    from keyboards import get_creator_price_keyboard
+    await callback.message.edit_text(
+        "💰 <b>Paso 3 de 5: PRECIO DE SUSCRIPCIÓN</b>\n\n"
+        "Elige el precio de tu suscripción mensual:\n\n"
+        "🆓 <b>GRATIS:</b> Perfecto para empezar y conseguir fans\n"
+        "⭐️ <b>50-200:</b> Precio moderado, bueno para la mayoría\n"
+        "⭐️ <b>500-1000:</b> Contenido premium de alta calidad\n\n"
+        "💡 <i>Puedes cambiar el precio más tarde</i>",
+        reply_markup=get_creator_price_keyboard()
+    )
+
+@router.callback_query(F.data == "edit_description")
+async def edit_creator_description(callback: CallbackQuery, state: FSMContext):
+    """Volver a pedir la descripción"""
+    await callback.answer()
+    await callback.message.edit_text(
+        "✏️ <b>Paso 2 de 5: DESCRIPCIÓN</b>\n\n"
+        "Escribe una nueva descripción (máximo 200 caracteres):\n\n"
+        "💡 <i>Describe tu contenido de forma atractiva</i>"
+    )
+    await state.set_state(CreatorRegistration.waiting_for_description)
+
+@router.callback_query(F.data.startswith("price_"))
+async def select_subscription_price(callback: CallbackQuery, state: FSMContext):
+    """Seleccionar precio de suscripción predefinido"""
+    await callback.answer()
     
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⭐️ Stars (Telegram)", callback_data="payout_stars")],
-        [InlineKeyboardButton(text="💵 Dinero real", callback_data="payout_real")]
-    ])
+    price = int(callback.data.split("_")[1])
+    await state.update_data(subscription_price=price)
     
-    await message.answer(
-        "💳 Paso 5/5: ¿Cómo quieres recibir tus ganancias?",
-        reply_markup=keyboard
+    from keyboards import get_creator_photo_keyboard
+    price_text = "GRATIS" if price == 0 else f"{price} ⭐️"
+    
+    await callback.message.edit_text(
+        f"✅ <b>PRECIO SELECCIONADO</b>\n\n"
+        f"Precio de suscripción: <b>{price_text}</b>\n\n"
+        f"📸 <b>Paso 4 de 5: FOTO DE PERFIL</b>\n"
+        f"Una foto atractiva aumenta hasta 3x más suscriptores.\n\n"
+        f"¿Quieres subir una foto ahora?",
+        reply_markup=get_creator_photo_keyboard()
+    )
+    await state.set_state(CreatorRegistration.waiting_for_photo)
+
+@router.callback_query(F.data == "custom_price")
+async def request_custom_price(callback: CallbackQuery, state: FSMContext):
+    """Pedir precio personalizado"""
+    await callback.answer()
+    await callback.message.edit_text(
+        "✏️ <b>PRECIO PERSONALIZADO</b>\n\n"
+        "Escribe el precio de tu suscripción mensual en ⭐️ Stars:\n\n"
+        "💡 <b>Ejemplos:</b>\n"
+        "• 0 = Gratis\n"
+        "• 150 = 150 ⭐️ (aprox $2 USD)\n"
+        "• 750 = 750 ⭐️ (aprox $10 USD)\n\n"
+        "<i>Escribe solo el número:</i>"
+    )
+    await state.set_state(CreatorRegistration.waiting_for_price)
+
+@router.callback_query(F.data == "upload_photo_now")
+async def request_photo_upload(callback: CallbackQuery, state: FSMContext):
+    """Pedir subida de foto"""
+    await callback.answer()
+    await callback.message.edit_text(
+        "📸 <b>SUBIR FOTO DE PERFIL</b>\n\n"
+        "Envía tu mejor foto de perfil ahora.\n\n"
+        "💡 <b>Consejos:</b>\n"
+        "• Usa buena iluminación\n"
+        "• Sonríe y mira a la cámara\n"
+        "• Evita fotos borrosas\n\n"
+        "<i>Envía la imagen ahora:</i>"
+    )
+    # Estado se mantiene en waiting_for_photo
+
+@router.callback_query(F.data == "skip_photo")
+async def skip_profile_photo(callback: CallbackQuery, state: FSMContext):
+    """Saltar foto de perfil"""
+    await callback.answer()
+    await state.update_data(photo_url=None)
+    
+    from keyboards import get_creator_payout_keyboard
+    await callback.message.edit_text(
+        "⏭️ <b>FOTO OMITIDA</b>\n\n"
+        "Puedes agregar una foto más tarde desde tu perfil.\n\n"
+        "💳 <b>Paso 5 de 5: MÉTODO DE PAGO</b>\n"
+        "¿Cómo prefieres recibir tus ganancias?",
+        reply_markup=get_creator_payout_keyboard()
     )
     await state.set_state(CreatorRegistration.waiting_for_payout)
+
+@router.callback_query(F.data == "cancel_registration")
+async def cancel_creator_registration(callback: CallbackQuery, state: FSMContext):
+    """Cancelar proceso de registro"""
+    await callback.answer()
+    await state.clear()
+    
+    from nav_states import NavigationManager, MenuState
+    await NavigationManager.reset_to_main(state)
+    
+    from keyboards import get_main_menu
+    await callback.message.edit_text(
+        "❌ <b>REGISTRO CANCELADO</b>\n\n"
+        "Has cancelado el registro de creador.\n"
+        "Puedes intentarlo de nuevo cuando quieras usando el menú principal."
+    )
+    # Enviar nuevo mensaje con el menú principal
+    await callback.message.answer(
+        "🏠 <b>MENÚ PRINCIPAL</b>\n\n¿Qué te gustaría hacer?",
+        reply_markup=get_main_menu(callback.from_user.username)
+    )
 
 @router.callback_query(F.data.in_(["payout_stars", "payout_real"]))
 async def process_payout_method(callback: CallbackQuery, state: FSMContext):

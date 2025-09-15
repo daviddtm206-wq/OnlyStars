@@ -336,3 +336,61 @@ def get_subscription_confirmation_keyboard(creator_id: int, price: int) -> Inlin
         [InlineKeyboardButton(text="❌ Cancelar", callback_data="cancel_subscription")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+# ==================== KEYBOARDS PARA REGISTRO DE CREADORES ====================
+
+def get_creator_name_confirmation_keyboard() -> InlineKeyboardMarkup:
+    """Teclado para confirmar nombre artístico durante registro"""
+    keyboard = [
+        [InlineKeyboardButton(text="✅ Confirmar Nombre", callback_data="confirm_name")],
+        [InlineKeyboardButton(text="✏️ Editar Nombre", callback_data="edit_name")],
+        [InlineKeyboardButton(text="❌ Cancelar Registro", callback_data="cancel_registration")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def get_creator_description_confirmation_keyboard() -> InlineKeyboardMarkup:
+    """Teclado para confirmar descripción durante registro"""
+    keyboard = [
+        [InlineKeyboardButton(text="✅ Confirmar Descripción", callback_data="confirm_description")],
+        [InlineKeyboardButton(text="✏️ Editar Descripción", callback_data="edit_description")],
+        [InlineKeyboardButton(text="❌ Cancelar Registro", callback_data="cancel_registration")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def get_creator_price_keyboard() -> InlineKeyboardMarkup:
+    """Teclado para seleccionar precio de suscripción"""
+    keyboard = [
+        [
+            InlineKeyboardButton(text="🆓 GRATIS (0 ⭐️)", callback_data="price_0"),
+            InlineKeyboardButton(text="⭐️ 50 Stars", callback_data="price_50")
+        ],
+        [
+            InlineKeyboardButton(text="⭐️ 100 Stars", callback_data="price_100"),
+            InlineKeyboardButton(text="⭐️ 200 Stars", callback_data="price_200")
+        ],
+        [
+            InlineKeyboardButton(text="⭐️ 500 Stars", callback_data="price_500"),
+            InlineKeyboardButton(text="⭐️ 1000 Stars", callback_data="price_1000")
+        ],
+        [InlineKeyboardButton(text="✏️ Precio Personalizado", callback_data="custom_price")],
+        [InlineKeyboardButton(text="❌ Cancelar Registro", callback_data="cancel_registration")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def get_creator_photo_keyboard() -> InlineKeyboardMarkup:
+    """Teclado para manejar foto de perfil durante registro"""
+    keyboard = [
+        [InlineKeyboardButton(text="📸 Subir Foto Ahora", callback_data="upload_photo_now")],
+        [InlineKeyboardButton(text="⏭️ Saltar Foto", callback_data="skip_photo")],
+        [InlineKeyboardButton(text="❌ Cancelar Registro", callback_data="cancel_registration")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def get_creator_payout_keyboard() -> InlineKeyboardMarkup:
+    """Teclado para seleccionar método de pago"""
+    keyboard = [
+        [InlineKeyboardButton(text="⭐️ Stars (Telegram)", callback_data="payout_stars")],
+        [InlineKeyboardButton(text="💵 Dinero Real", callback_data="payout_real")],
+        [InlineKeyboardButton(text="❌ Cancelar Registro", callback_data="cancel_registration")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
