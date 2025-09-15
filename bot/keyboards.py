@@ -234,9 +234,33 @@ def get_registration_keyboard() -> InlineKeyboardMarkup:
 def get_balance_keyboard() -> InlineKeyboardMarkup:
     """Teclado inline para opciones de balance"""
     keyboard = [
-        [InlineKeyboardButton(text="💰 Retirar Ganancias", callback_data="withdraw_menu")],
+        [InlineKeyboardButton(text="💸 Retirar Ganancias", callback_data="profile_withdraw")],
         [InlineKeyboardButton(text="📊 Ver Historial", callback_data="view_history")],
-        [InlineKeyboardButton(text="🔄 Actualizar Balance", callback_data="refresh_balance")]
+        [InlineKeyboardButton(text="🔄 Actualizar Balance", callback_data="refresh_balance")],
+        [InlineKeyboardButton(text="🔙 Volver", callback_data="back_to_creator_main")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def get_profile_edit_keyboard() -> InlineKeyboardMarkup:
+    """Teclado inline para opciones de edición de perfil"""
+    keyboard = [
+        [
+            InlineKeyboardButton(text="🎨 Cambiar Nombre", callback_data="edit_name"),
+            InlineKeyboardButton(text="📝 Cambiar Descripción", callback_data="edit_description")
+        ],
+        [
+            InlineKeyboardButton(text="💰 Cambiar Precio", callback_data="edit_price"),
+            InlineKeyboardButton(text="📸 Cambiar Foto", callback_data="edit_photo")
+        ],
+        [InlineKeyboardButton(text="🔙 Volver", callback_data="back_to_creator_main")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def get_withdrawal_confirmation_keyboard(amount: int) -> InlineKeyboardMarkup:
+    """Teclado de confirmación para retiro"""
+    keyboard = [
+        [InlineKeyboardButton(text=f"✅ Confirmar Retiro de {amount} ⭐️", callback_data=f"confirm_withdraw_{amount}")],
+        [InlineKeyboardButton(text="❌ Cancelar", callback_data="profile_balance")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
@@ -391,5 +415,34 @@ def get_creator_payout_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
         [InlineKeyboardButton(text="⭐️ Confirmar - Solo Stars", callback_data="payout_stars")],
         [InlineKeyboardButton(text="❌ Cancelar Registro", callback_data="cancel_registration")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+# ==================== PERFIL DE CREADOR PROFESIONAL ====================
+
+def get_creator_profile_main_keyboard() -> InlineKeyboardMarkup:
+    """Menú principal profesional para creadores registrados"""
+    keyboard = [
+        [InlineKeyboardButton(text="📊 Ver Mi Perfil", callback_data="view_my_profile")],
+        [InlineKeyboardButton(text="🔙 Volver al Menú", callback_data="back_to_main")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def get_creator_profile_submenu_keyboard() -> InlineKeyboardMarkup:
+    """Submenú completo para gestión de perfil de creador"""
+    keyboard = [
+        [
+            InlineKeyboardButton(text="💰 Ver Balance", callback_data="profile_balance"),
+            InlineKeyboardButton(text="💸 Retirar Ganancias", callback_data="profile_withdraw")
+        ],
+        [
+            InlineKeyboardButton(text="🎥 Crear Contenido PPV", callback_data="profile_create_ppv"),
+            InlineKeyboardButton(text="✏️ Editar Perfil", callback_data="profile_edit")
+        ],
+        [
+            InlineKeyboardButton(text="📊 Mi Catálogo", callback_data="profile_catalog"),
+            InlineKeyboardButton(text="📈 Estadísticas", callback_data="profile_stats")
+        ],
+        [InlineKeyboardButton(text="🔙 Volver", callback_data="back_to_creator_main")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)

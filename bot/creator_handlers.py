@@ -83,6 +83,16 @@ class ProfileEdit(StatesGroup):
     waiting_for_new_price = State()
     waiting_for_new_photo = State()
 
+class WithdrawalFlow(StatesGroup):
+    waiting_for_amount = State()
+    confirming_withdrawal = State()
+
+class CreatePPVContent(StatesGroup):
+    waiting_for_content = State()
+    waiting_for_more_content = State()
+    waiting_for_price = State()
+    waiting_for_description = State()
+
 @router.message(Command("convertirme_en_creador"))
 async def start_creator_registration(message: Message, state: FSMContext):
     if is_user_banned(message.from_user.id):
@@ -1030,3 +1040,140 @@ async def show_creator_card_callback(callback: CallbackQuery, creators: list, pa
         await callback.answer()
     except Exception as e:
         await callback.answer("❌ Error al cargar creador.", show_alert=True)
+
+# ==================== WITHDRAWAL FLOW HANDLERS ====================
+
+@router.message(WithdrawalFlow.waiting_for_amount)
+async def process_withdrawal_amount(message: Message, state: FSMContext):
+    """Procesar cantidad para retiro"""
+    if is_user_banned(message.from_user.id):
+        await message.answer("❌ Tu cuenta está baneada.")
+        await state.clear()
+        return
+    
+    creator = get_creator_by_id(message.from_user.id)
+    if not creator:
+        await message.answer("❌ No estás registrado como creador.")
+        await state.clear()
+        return
+    
+    amount_text = message.text.strip().lower()
+    current_balance = get_user_balance(message.from_user.id)
+    min_withdrawal = int(os.getenv("MIN_WITHDRAWAL", 1000))
+    
+    # Manejar "todo" para retirar todo el balance
+    if amount_text == "todo":
+        if current_balance < min_withdrawal:
+            await message.answer(
+                f"❌ <b>No puedes retirar todo</b>\n\n"
+                f"Tu balance actual ({current_balance} ⭐️) está por debajo del mínimo de retiro ({min_withdrawal} ⭐️)."
+            )
+            return
+        amount = current_balance
+    else:
+        try:
+            amount = int(amount_text)
+            if amount <= 0:
+                raise ValueError
+        except ValueError:
+            await message.answer(
+                "❌ <b>Cantidad inválida</b>\n\n"
+                "Por favor ingresa un número válido o escribe 'todo' para retirar todo tu balance.\n\n"
+                "<i>Ejemplo: 1000</i>"
+            )
+            return
+    
+    # Validaciones
+    if amount < min_withdrawal:
+        await message.answer(f"❌ El retiro mínimo es de {min_withdrawal} ⭐️")
+        return
+    
+    if amount > current_balance:
+        await message.answer(
+            f"❌ <b>Balance insuficiente</b>\n\n"
+            f"Cantidad solicitada: {amount} ⭐️\n"
+            f"Tu balance actual: {current_balance} ⭐️"
+        )
+        return
+    
+    # Mostrar confirmación
+    amount_usd = amount * float(os.getenv("EXCHANGE_RATE", 0.013))
+    remaining_balance = current_balance - amount
+    
+    confirmation_text = (
+        f"💸 <b>CONFIRMAR RETIRO</b>\n\n"
+        f"💰 <b>Cantidad a retirar:</b> {amount} ⭐️\n"
+        f"💵 <b>Equivalente USD:</b> ~${amount_usd:.2f}\n"
+        f"💎 <b>Balance restante:</b> {remaining_balance} ⭐️\n\n"
+        f"🏦 <b>Método de pago:</b> {creator[6]}\n"
+        f"🕰️ <b>Tiempo de procesamiento:</b> 24-48 horas\n\n"
+        f"❗️ <b>¿Confirmas este retiro?</b>"
+    )
+    
+    from keyboards import get_withdrawal_confirmation_keyboard
+    await message.answer(
+        text=confirmation_text,
+        reply_markup=get_withdrawal_confirmation_keyboard(amount)
+    )
+    await state.update_data(withdrawal_amount=amount)
+    await state.set_state(WithdrawalFlow.confirming_withdrawal)
+
+@router.callback_query(F.data.startswith("confirm_withdraw_"))
+async def confirm_withdrawal(callback: CallbackQuery, state: FSMContext):
+    """Confirmar y procesar retiro"""
+    if is_user_banned(callback.from_user.id):
+        await callback.answer("❌ Tu cuenta está baneada.", show_alert=True)
+        await state.clear()
+        return
+    
+    creator = get_creator_by_id(callback.from_user.id)
+    if not creator:
+        await callback.answer("❌ No se encontró tu perfil de creador.", show_alert=True)
+        await state.clear()
+        return
+    
+    amount = int(callback.data.split("_")[2])
+    current_balance = get_user_balance(callback.from_user.id)
+    
+    # Verificación final de balance (por si cambió entre confirmación)
+    if amount > current_balance:
+        await callback.message.edit_text(
+            f"❌ <b>Error: Balance insuficiente</b>\n\n"
+            f"Tu balance actual: {current_balance} ⭐️\n"
+            f"El retiro ha sido cancelado."
+        )
+        await state.clear()
+        await callback.answer()
+        return
+    
+    # Procesar retiro
+    if withdraw_balance(callback.from_user.id, amount):
+        amount_usd = amount * float(os.getenv("EXCHANGE_RATE", 0.013))
+        remaining_balance = current_balance - amount
+        
+        success_text = (
+            f"✅ <b>RETIRO PROCESADO EXITOSAMENTE</b>\n\n"
+            f"💰 <b>Monto retirado:</b> {amount} ⭐️\n"
+            f"💵 <b>Equivalente USD:</b> ~${amount_usd:.2f}\n"
+            f"💎 <b>Balance restante:</b> {remaining_balance} ⭐️\n\n"
+            f"🏦 <b>El dinero será transferido según tu método de pago configurado.</b>\n"
+            f"🕰️ <b>Tiempo estimado:</b> 24-48 horas\n\n"
+            f"📞 <b>Recibirás una notificación cuando se complete.</b>"
+        )
+        
+        await callback.message.edit_text(
+            text=success_text,
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="💰 Ver Balance Actualizado", callback_data="profile_balance")],
+                [InlineKeyboardButton(text="🔙 Volver al Panel", callback_data="back_to_creator_main")]
+            ])
+        )
+    else:
+        await callback.message.edit_text(
+            f"❌ <b>Error al procesar retiro</b>\n\n"
+            f"Hubo un problema técnico. Inténtalo de nuevo más tarde.\n\n"
+            f"Si el problema persiste, contacta al soporte."
+        )
+    
+    await state.clear()
+    await callback.answer()

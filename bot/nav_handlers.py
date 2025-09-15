@@ -4,11 +4,11 @@ Maneja transiciones entre menús y funciones de navegación
 """
 
 from aiogram import Router, F
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
-from database import get_creator_by_id, is_user_banned
+from database import get_creator_by_id, is_user_banned, get_user_balance, get_ppv_by_creator
 from nav_states import MenuState, NavigationManager
-from keyboards import get_main_menu, get_creator_menu, get_explore_menu, get_admin_menu, get_creator_onboarding_menu, is_admin_user
+from keyboards import get_main_menu, get_creator_menu, get_explore_menu, get_admin_menu, get_creator_onboarding_menu, is_admin_user, get_creator_profile_main_keyboard, get_creator_profile_submenu_keyboard
 
 router = Router()
 
@@ -37,8 +37,16 @@ async def show_menu(state: MenuState, message: Message, context: FSMContext):
             )
             keyboard = get_creator_onboarding_menu()
         else:
-            text = f"🎨 <b>PANEL DE CREADOR</b>\n\n¡Hola {creator[3]}! ¿Qué deseas hacer?"
-            keyboard = get_creator_menu()
+            # Creador ya registrado - mostrar menú profesional con botones inline
+            text = (
+                f"🎨 <b>PANEL DE CREADOR</b>\n\n"
+                f"¡Hola {creator[3]}! 👋\n\n"
+                f"📊 <b>Tu perfil está activo</b>\n"
+                f"💰 Precio de suscripción: {creator[4]} ⭐️\n"
+                f"👥 Suscriptores activos: {creator[6] if len(creator) > 6 else 0}\n\n"
+                f"💫 <b>¿Qué deseas gestionar hoy?</b>"
+            )
+            keyboard = get_creator_profile_main_keyboard()
         
     elif state == MenuState.EXPLORE:
         text = "🔍 <b>EXPLORAR CREADORES</b>\n\nDescubre contenido exclusivo y conecta con tus creadores favoritos"
@@ -307,3 +315,258 @@ async def handle_volver(message: Message, state: FSMContext):
     """Manejar botón 'Volver' - navegar al menú anterior"""
     previous_state = await NavigationManager.pop_state(state)
     await show_menu(previous_state, message, state)
+
+# ==================== HANDLERS PARA PERFIL DE CREADOR PROFESIONAL ====================
+
+@router.callback_query(F.data == "view_my_profile")
+async def handle_view_my_profile(callback: CallbackQuery, state: FSMContext):
+    """Manejar 'Ver Mi Perfil' - mostrar submenú de gestión"""
+    creator = get_creator_by_id(callback.from_user.id)
+    if not creator:
+        await callback.answer("❌ Error: No se encontró tu perfil de creador.")
+        return
+    
+    # Mostrar información del perfil y submenú de opciones
+    profile_text = (
+        f"👤 <b>MI PERFIL DE CREADOR</b>\n\n"
+        f"🎨 <b>Nombre artístico:</b> {creator[3]}\n"
+        f"📝 <b>Descripción:</b> {creator[2] if creator[2] else 'Sin descripción'}\n"
+        f"💰 <b>Precio de suscripción:</b> {creator[4]} ⭐️\n"
+        f"👥 <b>Suscriptores activos:</b> {creator[6] if len(creator) > 6 else 0}\n"
+        f"📊 <b>Estado:</b> ✅ Perfil activo\n\n"
+        f"💫 <b>¿Qué deseas gestionar?</b>"
+    )
+    
+    await callback.message.edit_text(
+        text=profile_text,
+        reply_markup=get_creator_profile_submenu_keyboard()
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "back_to_main")
+async def handle_back_to_main(callback: CallbackQuery, state: FSMContext):
+    """Volver al menú principal"""
+    await NavigationManager.reset_to_main(state)
+    
+    # Eliminar el mensaje inline actual
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass  # Ignorar errores si el mensaje ya fue eliminado
+    
+    # Enviar nuevo mensaje con el menú principal (ReplyKeyboardMarkup)
+    username = callback.from_user.username
+    text = "🌟 <b>ONLYSTARS - MENÚ PRINCIPAL</b>\n\n¿Qué te gustaría hacer hoy?"
+    keyboard = get_main_menu(username)
+    
+    await callback.message.answer(text, reply_markup=keyboard)
+    await callback.answer()
+
+@router.callback_query(F.data == "back_to_creator_main")
+async def handle_back_to_creator_main(callback: CallbackQuery, state: FSMContext):
+    """Volver al menú principal de creador"""
+    creator = get_creator_by_id(callback.from_user.id)
+    if not creator:
+        await callback.answer("❌ Error: No se encontró tu perfil de creador.")
+        return
+    
+    text = (
+        f"🎨 <b>PANEL DE CREADOR</b>\n\n"
+        f"¡Hola {creator[3]}! 👋\n\n"
+        f"📊 <b>Tu perfil está activo</b>\n"
+        f"💰 Precio de suscripción: {creator[4]} ⭐️\n"
+        f"👥 Suscriptores activos: {creator[6] if len(creator) > 6 else 0}\n\n"
+        f"💫 <b>¿Qué deseas gestionar hoy?</b>"
+    )
+    
+    await callback.message.edit_text(
+        text=text,
+        reply_markup=get_creator_profile_main_keyboard()
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "profile_balance")
+async def handle_profile_balance(callback: CallbackQuery, state: FSMContext):
+    """Ver balance del creador"""
+    creator = get_creator_by_id(callback.from_user.id)
+    if not creator:
+        await callback.answer("❌ Error: No se encontró tu perfil de creador.", show_alert=True)
+        return
+    
+    from database import get_user_balance
+    balance = get_user_balance(callback.from_user.id)
+    
+    balance_text = (
+        f"💰 <b>MI BALANCE</b>\n\n"
+        f"🌟 <b>Balance actual:</b> {balance} ⭐️\n"
+        f"💵 <b>Equivalente USD:</b> ~${balance * 0.013:.2f}\n\n"
+        f"📊 <b>Información:</b>\n"
+        f"• Comisión de plataforma: 20%\n"
+        f"• Retiro mínimo: 1000 ⭐️\n"
+        f"• Tasa: $0.013 por estrella\n\n"
+        f"💡 <b>¿Quieres retirar ganancias?</b> Usa el botón de abajo"
+    )
+    
+    from keyboards import get_balance_keyboard
+    await callback.message.edit_text(
+        text=balance_text,
+        reply_markup=get_balance_keyboard()
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "profile_withdraw")
+async def handle_profile_withdraw(callback: CallbackQuery, state: FSMContext):
+    """Iniciar flujo de retiro guiado"""
+    if is_user_banned(callback.from_user.id):
+        await callback.answer("❌ Tu cuenta está baneada y no puedes retirar.", show_alert=True)
+        return
+    
+    creator = get_creator_by_id(callback.from_user.id)
+    if not creator:
+        await callback.answer("❌ Error: No se encontró tu perfil de creador.", show_alert=True)
+        return
+    
+    from database import get_user_balance
+    import os
+    
+    balance = get_user_balance(callback.from_user.id)
+    min_withdrawal = int(os.getenv("MIN_WITHDRAWAL", 1000))
+    
+    if balance < min_withdrawal:
+        await callback.answer(
+            f"❌ Balance insuficiente. Necesitas al menos {min_withdrawal} ⭐️ para retirar.\nTu balance actual: {balance} ⭐️",
+            show_alert=True
+        )
+        return
+    
+    withdraw_text = (
+        f"💸 <b>RETIRAR GANANCIAS</b>\n\n"
+        f"💰 <b>Balance disponible:</b> {balance} ⭐️\n"
+        f"💵 <b>Equivalente USD:</b> ~${balance * 0.013:.2f}\n\n"
+        f"📊 <b>Información:</b>\n"
+        f"• Retiro mínimo: {min_withdrawal} ⭐️\n"
+        f"• Tasa: $0.013 por estrella\n\n"
+        f"🔢 <b>Escribe la cantidad que quieres retirar:</b>\n"
+        f"<i>Ejemplo: 1000 (o 'todo' para retirar todo)</i>"
+    )
+    
+    from creator_handlers import WithdrawalFlow
+    await callback.message.edit_text(withdraw_text)
+    await state.set_state(WithdrawalFlow.waiting_for_amount)
+    await callback.answer()
+
+@router.callback_query(F.data == "profile_create_ppv")
+async def handle_profile_create_ppv(callback: CallbackQuery, state: FSMContext):
+    """Crear contenido PPV"""
+    from creator_handlers import CreatePPVContent
+    
+    await callback.message.edit_text(
+        "🎥 <b>CREAR CONTENIDO PPV</b>\n\n"
+        "📸 Sube una foto o video que quieras monetizar.\n"
+        "💰 Después podrás establecer el precio en Stars.\n\n"
+        "📤 <b>Envía tu contenido ahora:</b>"
+    )
+    
+    await state.set_state(CreatePPVContent.waiting_for_content)
+    await callback.answer()
+
+@router.callback_query(F.data == "profile_edit")
+async def handle_profile_edit(callback: CallbackQuery, state: FSMContext):
+    """Mostrar opciones de edición de perfil"""
+    if is_user_banned(callback.from_user.id):
+        await callback.answer("❌ Tu cuenta está baneada y no puedes editar tu perfil.", show_alert=True)
+        return
+    
+    creator = get_creator_by_id(callback.from_user.id)
+    if not creator:
+        await callback.answer("❌ Error: No se encontró tu perfil de creador.", show_alert=True)
+        return
+    
+    edit_text = (
+        f"✏️ <b>EDITAR PERFIL</b>\n\n"
+        f"🎨 <b>Nombre actual:</b> {creator[3]}\n"
+        f"📝 <b>Descripción actual:</b> {creator[2] if creator[2] else 'Sin descripción'}\n"
+        f"💰 <b>Precio actual:</b> {creator[4]} ⭐️\n\n"
+        f"📝 <b>¿Qué quieres editar?</b>"
+    )
+    
+    from keyboards import get_profile_edit_keyboard
+    await callback.message.edit_text(
+        text=edit_text,
+        reply_markup=get_profile_edit_keyboard()
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "profile_catalog")
+async def handle_profile_catalog(callback: CallbackQuery, state: FSMContext):
+    """Ver catálogo personal"""
+    creator = get_creator_by_id(callback.from_user.id)
+    if not creator:
+        await callback.answer("❌ Error: No se encontró tu perfil de creador.", show_alert=True)
+        return
+    
+    from database import get_ppv_by_creator
+    content_list = get_ppv_by_creator(callback.from_user.id)
+    
+    if not content_list:
+        catalog_text = (
+            f"📊 <b>MI CATÁLOGO</b>\n\n"
+            f"📭 <b>No tienes contenido PPV aún</b>\n\n"
+            f"💡 <b>¡Empieza a crear!</b>\n"
+            f"Usa 'Crear Contenido PPV' para subir tu primer contenido y comenzar a ganar dinero.\n\n"
+            f"🎯 <b>Tipos de contenido:</b>\n"
+            f"• Fotos exclusivas\n"
+            f"• Videos premium\n"
+            f"• Álbumes temáticos"
+        )
+    else:
+        catalog_text = f"📊 <b>MI CATÁLOGO</b>\n\n📈 <b>Total de contenido:</b> {len(content_list)} elementos\n\n"
+        
+        for i, content in enumerate(content_list[:5], 1):  # Mostrar máximo 5
+            catalog_text += f"🎯 <b>{i}.</b> {content[3]} - {content[4]} ⭐️\n"
+        
+        if len(content_list) > 5:
+            catalog_text += f"\n... y {len(content_list) - 5} más\n"
+    
+    await callback.message.edit_text(
+        text=catalog_text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🎥 Crear Contenido PPV", callback_data="profile_create_ppv")],
+            [InlineKeyboardButton(text="🔙 Volver", callback_data="back_to_creator_main")]
+        ])
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "profile_stats")
+async def handle_profile_stats(callback: CallbackQuery, state: FSMContext):
+    """Ver estadísticas del creador"""
+    creator = get_creator_by_id(callback.from_user.id)
+    if not creator:
+        await callback.answer("❌ Error: No se encontró tu perfil de creador.", show_alert=True)
+        return
+    
+    from database import get_creator_stats, get_ppv_by_creator, get_user_balance
+    
+    balance = get_user_balance(callback.from_user.id)
+    content_count = len(get_ppv_by_creator(callback.from_user.id))
+    
+    stats_text = (
+        f"📈 <b>MIS ESTADÍSTICAS</b>\n\n"
+        f"👤 <b>Perfil:</b> {creator[3]}\n"
+        f"💰 <b>Precio suscripción:</b> {creator[4]} ⭐️\n"
+        f"👥 <b>Suscriptores:</b> {creator[6] if len(creator) > 6 else 0}\n"
+        f"🎯 <b>Contenido PPV:</b> {content_count} elementos\n"
+        f"💎 <b>Balance actual:</b> {balance} ⭐️\n"
+        f"💵 <b>Equivalente USD:</b> ~${balance * 0.013:.2f}\n\n"
+        f"📊 <b>Estado del perfil:</b> ✅ Activo\n"
+        f"📅 <b>Miembro desde:</b> {creator[9][:10] if len(creator) > 9 else 'N/A'}"
+    )
+    
+    await callback.message.edit_text(
+        text=stats_text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="💰 Ver Balance Detallado", callback_data="profile_balance")],
+            [InlineKeyboardButton(text="🔙 Volver", callback_data="back_to_creator_main")]
+        ])
+    )
+    await callback.answer()
