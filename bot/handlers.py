@@ -55,22 +55,19 @@ async def cmd_start(message: Message, state: FSMContext):
     
     await message.answer(welcome_text, reply_markup=keyboard)
 
-# HANDLERS PARA BOTONES DEL TECLADO
-
-@router.message(F.text == "🔍 Explorar Creadores")
-async def keyboard_explore_creators(message: Message):
-    from creator_handlers import explore_creators
-    await explore_creators(message)
+# HANDLERS PARA BOTONES DEL TECLADO (solo los no manejados por navegación jerárquica)
 
 @router.message(F.text == "📺 Mis Catálogos")
 async def keyboard_my_catalogs(message: Message, state: FSMContext):
     from catalog_handlers import show_my_catalogs
     await show_my_catalogs(message, state)
 
-@router.message(F.text == "🎨 Ser Creador")
-async def keyboard_become_creator(message: Message, state: FSMContext):
-    from creator_handlers import start_creator_registration
-    await start_creator_registration(message, state)
+# NOTA: Los siguientes botones son manejados por nav_handlers.py:
+# - "🎨 Ser Creador" 
+# - "🔍 Explorar Creadores"
+# - "🛡️ Admin Panel"
+# - "ℹ️ Ayuda"
+# - "⬅️ Volver"
 
 @router.message(F.text == "💰 Enviar Propina")
 async def keyboard_send_tip(message: Message):
@@ -176,52 +173,15 @@ async def keyboard_back_to_creator(message: Message):
         reply_markup=keyboard
     )
 
-@router.message(F.text == "🛡️ Admin Panel")
-async def keyboard_admin_panel(message: Message):
-    from admin_handlers import admin_panel
-    await admin_panel(message)
-
-@router.message(F.text == "ℹ️ Ayuda")
-async def keyboard_help(message: Message):
-    creator = get_creator_by_id(message.from_user.id)
-    
-    if creator:
-        help_text = (
-            "🤖 <b>AYUDA - PANEL DE CREADOR</b>\n\n"
-            "🎨 <b>Gestión de Contenido:</b>\n"
-            "• 📸 Crear PPV - Sube fotos/videos de pago\n"
-            "• 📊 Mi Catálogo - Gestiona tu contenido\n"
-            "• ⚙️ Editar Perfil - Cambia tu información\n\n"
-            "💰 <b>Finanzas:</b>\n"
-            "• 💎 Balance - Ver y retirar ganancias\n"
-            "• Comisión de plataforma: 20%\n"
-            "• Retiro mínimo: 1000 ⭐️\n\n"
-            "👥 <b>Interacción:</b>\n"
-            "• 🔍 Explorar - Ve otros creadores\n"
-            "• 👥 Ver Como Fan - Cambia de perspectiva\n\n"
-            "⚡️ <b>Powered by Telegram Stars</b> ⭐️"
-        )
-    else:
-        help_text = (
-            "🤖 <b>AYUDA - PANEL DE FAN</b>\n\n"
-            "🔍 <b>Descubrimiento:</b>\n"
-            "• Explorar Creadores - Ve perfiles y precios\n"
-            "• Catálogos - Contenido de tus suscripciones\n\n"
-            "💰 <b>Pagos:</b>\n"
-            "• Enviar Propina - Apoya a tus creadores favoritos\n"
-            "• Comprar PPV - Accede a contenido exclusivo\n"
-            "• Suscripciones - Acceso mensual ilimitado\n\n"
-            "🎨 <b>¿Quieres ganar dinero?</b>\n"
-            "• Ser Creador - Registra tu cuenta\n"
-            "• Monetiza fotos, videos y contenido exclusivo\n\n"
-            "⚡️ <b>Powered by Telegram Stars</b> ⭐️"
-        )
-    
-    await message.answer(help_text)
+# Los siguientes handlers han sido movidos a nav_handlers.py para evitar conflictos:
+# - keyboard_admin_panel: "🛡️ Admin Panel" 
+# - keyboard_help: "ℹ️ Ayuda"
 
 @router.message(Command("help"))
-async def cmd_help(message: Message):
-    await keyboard_help(message)
+async def cmd_help(message: Message, state: FSMContext):
+    from nav_handlers import show_menu
+    from nav_states import MenuState
+    await show_menu(MenuState.HELP, message, state)
 
 # Inicializar base de datos al cargar
 init_db()
