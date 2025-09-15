@@ -4,8 +4,14 @@ import os
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "platform.db")
 
-def init_db():
+def get_db_connection():
+    """Get a database connection with foreign keys enabled"""
     conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+def init_db():
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute('''
@@ -107,7 +113,7 @@ def init_db():
     conn.close()
 
 def add_creator(user_id, username, display_name, description, subscription_price, photo_url, payout_method):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         INSERT OR REPLACE INTO creators 
@@ -118,7 +124,7 @@ def add_creator(user_id, username, display_name, description, subscription_price
     conn.close()
 
 def get_creator_by_id(creator_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM creators WHERE user_id = ?", (creator_id,))
     row = cursor.fetchone()
@@ -126,7 +132,7 @@ def get_creator_by_id(creator_id):
     return row
 
 def add_transaction(payer_id, receiver_id, amount_stars, commission_stars, tx_type):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO transactions (payer_id, receiver_id, amount_stars, commission_stars, type)
@@ -136,7 +142,7 @@ def add_transaction(payer_id, receiver_id, amount_stars, commission_stars, tx_ty
     conn.close()
 
 def add_subscriber(fan_id, creator_id, expires_at):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         INSERT OR REPLACE INTO subscribers (fan_id, creator_id, expires_at)
@@ -146,7 +152,7 @@ def add_subscriber(fan_id, creator_id, expires_at):
     conn.close()
 
 def get_user_balance(user_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT balance_stars FROM creators WHERE user_id = ?", (user_id,))
     row = cursor.fetchone()
@@ -154,42 +160,42 @@ def get_user_balance(user_id):
     return row[0] if row else 0
 
 def update_balance(user_id, stars):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("UPDATE creators SET balance_stars = balance_stars + ? WHERE user_id = ?", (stars, user_id))
     conn.commit()
     conn.close()
 
 def update_creator_display_name(user_id, display_name):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("UPDATE creators SET display_name = ? WHERE user_id = ?", (display_name, user_id))
     conn.commit()
     conn.close()
 
 def update_creator_description(user_id, description):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("UPDATE creators SET description = ? WHERE user_id = ?", (description, user_id))
     conn.commit()
     conn.close()
 
 def update_creator_subscription_price(user_id, price):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("UPDATE creators SET subscription_price = ? WHERE user_id = ?", (price, user_id))
     conn.commit()
     conn.close()
 
 def update_creator_photo(user_id, photo_url):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("UPDATE creators SET photo_url = ? WHERE user_id = ?", (photo_url, user_id))
     conn.commit()
     conn.close()
 
 def get_all_creators():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM creators")
     rows = cursor.fetchall()
@@ -197,7 +203,7 @@ def get_all_creators():
     return rows
 
 def get_creator_stats(creator_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM subscribers WHERE creator_id = ? AND expires_at > ?", (creator_id, int(time.time())))
     subscribers_count = cursor.fetchone()[0]
@@ -205,7 +211,7 @@ def get_creator_stats(creator_id):
     return subscribers_count
 
 def is_user_banned(user_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT 1 FROM banned_users WHERE user_id = ?", (user_id,))
     result = cursor.fetchone()
@@ -213,7 +219,7 @@ def is_user_banned(user_id):
     return result is not None
 
 def ban_user(user_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("INSERT OR IGNORE INTO banned_users (user_id) VALUES (?)", (user_id,))
     conn.commit()
@@ -221,7 +227,7 @@ def ban_user(user_id):
 
 def add_ppv_content(creator_id, title, description, price_stars, file_id=None, file_type=None, album_type='single'):
     """Crea contenido PPV individual o álbum"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO ppv_content (creator_id, title, description, price_stars, file_id, file_type, album_type)
@@ -234,7 +240,7 @@ def add_ppv_content(creator_id, title, description, price_stars, file_id=None, f
 
 def add_ppv_album_item(album_id, file_id, file_type, order_position):
     """Agrega un archivo al álbum PPV"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO ppv_album_items (album_id, file_id, file_type, order_position)
@@ -245,7 +251,7 @@ def add_ppv_album_item(album_id, file_id, file_type, order_position):
 
 def get_ppv_album_items(album_id):
     """Obtiene todos los archivos de un álbum en orden"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         SELECT * FROM ppv_album_items 
@@ -257,7 +263,7 @@ def get_ppv_album_items(album_id):
     return rows
 
 def get_ppv_content(content_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM ppv_content WHERE id = ?", (content_id,))
     row = cursor.fetchone()
@@ -266,7 +272,7 @@ def get_ppv_content(content_id):
 
 def add_ppv_purchase(buyer_id, content_id):
     """Agrega una compra PPV de manera segura, evitando duplicados"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     try:
         cursor.execute("INSERT INTO ppv_purchases (buyer_id, content_id) VALUES (?, ?)", (buyer_id, content_id))
@@ -279,7 +285,7 @@ def add_ppv_purchase(buyer_id, content_id):
         conn.close()
 
 def has_purchased_ppv(buyer_id, content_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT 1 FROM ppv_purchases WHERE buyer_id = ? AND content_id = ?", (buyer_id, content_id))
     result = cursor.fetchone()
@@ -287,7 +293,7 @@ def has_purchased_ppv(buyer_id, content_id):
     return result is not None
 
 def get_admin_stats():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("SELECT COUNT(*) FROM creators")
@@ -303,7 +309,7 @@ def get_admin_stats():
     return total_creators, total_transactions, total_commission
 
 def withdraw_balance(user_id, amount):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("UPDATE creators SET balance_stars = balance_stars - ? WHERE user_id = ? AND balance_stars >= ?", (amount, user_id, amount))
     success = cursor.rowcount > 0
@@ -315,7 +321,7 @@ import time
 
 def get_active_subscriptions(user_id):
     """Obtiene las suscripciones activas de un usuario"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         SELECT * FROM subscribers 
@@ -327,7 +333,7 @@ def get_active_subscriptions(user_id):
 
 def get_ppv_by_creator(creator_id):
     """Obtiene todo el contenido PPV de un creador específico"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         SELECT * FROM ppv_content 
@@ -340,7 +346,7 @@ def get_ppv_by_creator(creator_id):
 
 def delete_ppv_content(content_id, creator_id):
     """Elimina contenido PPV y todos sus elementos de álbum asociados"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
@@ -374,13 +380,13 @@ def delete_ppv_content(content_id, creator_id):
 
 def get_ppv_content_with_stats(creator_id):
     """Obtiene contenido PPV con estadísticas de compras"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         SELECT 
             p.*,
             COUNT(pp.id) as purchase_count,
-            COALESCE(SUM(pp.content_id), 0) as total_sales
+            COALESCE(COUNT(pp.id) * p.price_stars, 0) as total_sales
         FROM ppv_content p
         LEFT JOIN ppv_purchases pp ON p.id = pp.content_id
         WHERE p.creator_id = ?
