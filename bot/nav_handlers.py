@@ -105,12 +105,9 @@ async def handle_explorar_creadores(message: Message, state: FSMContext):
         await message.answer("❌ Tu cuenta está baneada y no puedes usar el bot.")
         return
     
-    # Mostrar directamente los creadores disponibles
+    # Mostrar directamente los creadores disponibles (sin navegar al submenú)
     from creator_handlers import explore_creators
     await explore_creators(message)
-    
-    # Opcional: También navegar al submenú de explorar
-    await NavigationManager.push_state(MenuState.EXPLORE, state)
 
 @router.message(F.text == "ℹ️ Ayuda")
 async def handle_ayuda(message: Message, state: FSMContext):
