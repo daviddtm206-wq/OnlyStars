@@ -70,7 +70,11 @@ async def show_admin_stats(callback: CallbackQuery):
         f"⭐️ <b>Powered by Telegram Stars</b>"
     )
     
-    await callback.message.edit_text(text, reply_markup=get_admin_keyboard())
+    # Evitar error de mensaje duplicado
+    if callback.message.text != text:
+        await callback.message.edit_text(text, reply_markup=get_admin_keyboard())
+    else:
+        await callback.answer("ℹ️ Estadísticas actualizadas", show_alert=False)
 
 @router.callback_query(F.data == "admin_users")
 async def show_admin_users(callback: CallbackQuery):
@@ -102,7 +106,11 @@ async def show_admin_users(callback: CallbackQuery):
         "• <code>/stats</code> - Estadísticas completas"
     )
     
-    await callback.message.edit_text(text, reply_markup=get_admin_keyboard())
+    # Evitar error de mensaje duplicado
+    if callback.message.text != text:
+        await callback.message.edit_text(text, reply_markup=get_admin_keyboard())
+    else:
+        await callback.answer("ℹ️ Panel de usuarios actualizado", show_alert=False)
 
 @router.callback_query(F.data == "admin_commissions")
 async def show_admin_commissions(callback: CallbackQuery):
@@ -128,7 +136,11 @@ async def show_admin_commissions(callback: CallbackQuery):
         f"👥 <b>Creadores activos:</b> {total_creators}"
     )
     
-    await callback.message.edit_text(text, reply_markup=get_admin_keyboard())
+    # Evitar error de mensaje duplicado
+    if callback.message.text != text:
+        await callback.message.edit_text(text, reply_markup=get_admin_keyboard())
+    else:
+        await callback.answer("ℹ️ Panel de comisiones actualizado", show_alert=False)
 
 @router.callback_query(F.data == "admin_bans")
 async def show_admin_bans(callback: CallbackQuery):
@@ -149,6 +161,61 @@ async def show_admin_bans(callback: CallbackQuery):
         "• Hacer compras o suscripciones\n"
         "• Enviar propinas\n"
         "• Usar comandos del bot"
+    )
+    
+    # Evitar error de mensaje duplicado verificando si el contenido es diferente
+    if callback.message.text != text:
+        await callback.message.edit_text(text, reply_markup=get_admin_keyboard())
+    else:
+        await callback.answer("ℹ️ Panel ya actualizado", show_alert=False)
+
+@router.callback_query(F.data == "admin_broadcast")
+async def show_admin_broadcast(callback: CallbackQuery):
+    """Panel de anuncio global"""
+    if not is_admin(callback.from_user.id, callback.from_user.username):
+        await callback.answer("❌ Sin permisos de administrador", show_alert=True)
+        return
+    
+    total_creators, total_transactions, total_commission = get_admin_stats()
+    
+    text = (
+        "📢 <b>ANUNCIO GLOBAL</b>\n\n"
+        f"👥 <b>Destinatarios potenciales:</b> {total_creators} creadores\n\n"
+        "🔧 <b>Comandos disponibles:</b>\n"
+        "• <code>/enviar_anuncio [mensaje]</code>\n"
+        "  Envía un mensaje a todos los creadores\n\n"
+        "📝 <b>Ejemplo:</b>\n"
+        "<code>/enviar_anuncio 🎉 ¡Nueva función disponible! Ahora puedes crear álbumes PPV con hasta 10 fotos.</code>\n\n"
+        "⚠️ <b>Nota:</b> El mensaje se enviará inmediatamente a todos los usuarios registrados."
+    )
+    
+    await callback.message.edit_text(text, reply_markup=get_admin_keyboard())
+
+@router.callback_query(F.data == "admin_config")
+async def show_admin_config(callback: CallbackQuery):
+    """Panel de configuración"""
+    if not is_admin(callback.from_user.id, callback.from_user.username):
+        await callback.answer("❌ Sin permisos de administrador", show_alert=True)
+        return
+    
+    commission_rate = os.getenv("COMMISSION_PERCENTAGE", "20")
+    exchange_rate = os.getenv("EXCHANGE_RATE", "0.013")
+    min_withdrawal = os.getenv("MIN_WITHDRAWAL", "1000")
+    withdrawal_mode = os.getenv("WITHDRAWAL_MODE", "REAL")
+    
+    text = (
+        "🔧 <b>CONFIGURACIÓN DEL SISTEMA</b>\n\n"
+        f"💎 <b>Configuración actual:</b>\n"
+        f"• Comisión de plataforma: {commission_rate}%\n"
+        f"• Tasa de cambio: ${exchange_rate} por Star\n"
+        f"• Retiro mínimo: {min_withdrawal} ⭐️\n"
+        f"• Modo de retiro: {withdrawal_mode}\n"
+        f"• Admin: {os.getenv('ADMIN_USERNAME', '@admin')}\n\n"
+        "⚙️ <b>Sistema OnlyStars</b>\n"
+        "🗂 Base de datos: SQLite (runtime)\n"
+        "💫 Powered by Telegram Stars\n"
+        "🤖 Bot: Activo y funcionando\n\n"
+        "📊 La configuración se maneja mediante variables de entorno."
     )
     
     await callback.message.edit_text(text, reply_markup=get_admin_keyboard())
@@ -188,6 +255,56 @@ async def ban_user_command(message: Message):
         f"🆔 User ID: <code>{user_id}</code>\n"
         f"🚫 El usuario ya no puede usar el bot.\n\n"
         f"🔧 Usa /admin_panel para gestionar más usuarios."
+    )
+
+@router.message(Command("enviar_anuncio"))
+async def send_global_announcement(message: Message):
+    """Enviar anuncio global a todos los creadores"""
+    if not is_admin(message.from_user.id, message.from_user.username):
+        await message.answer("❌ No tienes permisos de administrador.")
+        return
+    
+    # Extraer mensaje del comando
+    args = message.text.split(maxsplit=1)
+    if len(args) < 2:
+        await message.answer(
+            "❌ <b>Uso incorrecto</b>\n\n"
+            "Usa: <code>/enviar_anuncio [mensaje]</code>\n\n"
+            "📝 <b>Ejemplo:</b>\n"
+            "<code>/enviar_anuncio 🎉 ¡Nueva función disponible!</code>"
+        )
+        return
+    
+    announcement = args[1]
+    creators = get_all_creators()
+    
+    if not creators:
+        await message.answer("😔 No hay creadores registrados para enviar el anuncio.")
+        return
+    
+    # Enviar anuncio a todos los creadores
+    sent_count = 0
+    failed_count = 0
+    
+    announcement_text = f"📢 <b>ANUNCIO OFICIAL</b>\n\n{announcement}\n\n━━━━━━━━━━━━━━━━━━\n💫 <i>OnlyStars Team</i>"
+    
+    bot = message.bot
+    for creator in creators:
+        creator_id = creator[1]  # user_id
+        try:
+            await bot.send_message(creator_id, announcement_text)
+            sent_count += 1
+        except Exception as e:
+            failed_count += 1
+            # Log del error (opcional)
+            print(f"Error enviando a {creator_id}: {e}")
+    
+    await message.answer(
+        f"📢 <b>ANUNCIO ENVIADO</b>\n\n"
+        f"✅ Enviado exitosamente: {sent_count}\n"
+        f"❌ Fallos: {failed_count}\n"
+        f"👥 Total creadores: {len(creators)}\n\n"
+        f"📝 Mensaje: {announcement[:100]}{'...' if len(announcement) > 100 else ''}"
     )
 
 @router.message(Command("stats"))

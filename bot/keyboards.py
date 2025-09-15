@@ -6,10 +6,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def get_main_keyboard(user_id: int) -> ReplyKeyboardMarkup:
+def get_main_keyboard(user_id: int, username: str = None) -> ReplyKeyboardMarkup:
     """Genera el teclado principal según el rol del usuario"""
     creator = get_creator_by_id(user_id)
     admin_username = os.getenv("ADMIN_USERNAME", "@admin")
+    
+    # Función para verificar si es admin por username
+    def is_admin_user(check_username: str) -> bool:
+        if not check_username:
+            return False
+        user_at = f"@{check_username}" if not check_username.startswith("@") else check_username
+        return user_at == admin_username or check_username == admin_username.replace("@", "")
     
     if creator:
         # Teclado para creadores registrados
@@ -33,7 +40,7 @@ def get_main_keyboard(user_id: int) -> ReplyKeyboardMarkup:
         ]
         
         # Si es admin, agregar botón de panel admin
-        if f"@{creator[2]}" == admin_username or creator[2] == admin_username.replace("@", ""):
+        if is_admin_user(creator[2]):
             keyboard.insert(-1, [KeyboardButton(text="🛡️ Admin Panel")])
             
     else:
@@ -52,6 +59,10 @@ def get_main_keyboard(user_id: int) -> ReplyKeyboardMarkup:
                 KeyboardButton(text="ℹ️ Ayuda")
             ]
         ]
+        
+        # Agregar botón de admin si el usuario es administrador (sin necesidad de ser creador)
+        if username and is_admin_user(username):
+            keyboard.insert(-1, [KeyboardButton(text="🛡️ Admin Panel")])
     
     return ReplyKeyboardMarkup(
         keyboard=keyboard,

@@ -27,7 +27,7 @@ async def cmd_start(message: Message):
         return
     
     creator = get_creator_by_id(message.from_user.id)
-    keyboard = get_main_keyboard(message.from_user.id)
+    keyboard = get_main_keyboard(message.from_user.id, message.from_user.username)
     
     if creator:
         welcome_text = (
@@ -160,7 +160,7 @@ async def keyboard_back_to_creator(message: Message):
         await message.answer("❌ No estás registrado como creador.")
         return
         
-    keyboard = get_main_keyboard(message.from_user.id)
+    keyboard = get_main_keyboard(message.from_user.id, message.from_user.username)
     await message.answer(
         f"🎨 <b>PANEL DE CREADOR RESTAURADO</b>\n\n"
         f"Bienvenido de vuelta, {creator[3]}!\n"
