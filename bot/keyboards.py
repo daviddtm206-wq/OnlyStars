@@ -6,6 +6,114 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def is_admin_user(username: str) -> bool:
+    """Verificar si un usuario es administrador"""
+    if not username:
+        return False
+    admin_username = os.getenv("ADMIN_USERNAME", "@admin")
+    user_at = f"@{username}" if not username.startswith("@") else username
+    return user_at == admin_username or username == admin_username.replace("@", "")
+
+# ==================== MENÚS JERÁRQUICOS ====================
+
+def get_main_menu(username: str = None) -> ReplyKeyboardMarkup:
+    """Menú principal simple y limpio"""
+    keyboard = [
+        [
+            KeyboardButton(text="🎨 Ser Creador"),
+            KeyboardButton(text="🔍 Explorar Creadores")
+        ],
+        [
+            KeyboardButton(text="ℹ️ Ayuda")
+        ]
+    ]
+    
+    # Agregar botón de admin solo para administradores
+    if username and is_admin_user(username):
+        keyboard.append([KeyboardButton(text="🛡️ Admin Panel")])
+    
+    return ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
+def get_creator_menu() -> ReplyKeyboardMarkup:
+    """Menú para creadores registrados"""
+    keyboard = [
+        [
+            KeyboardButton(text="👤 Mi Perfil"),
+            KeyboardButton(text="💎 Balance")
+        ],
+        [
+            KeyboardButton(text="📸 Crear PPV"),
+            KeyboardButton(text="📊 Mi Catálogo")
+        ],
+        [
+            KeyboardButton(text="⚙️ Editar Perfil"),
+            KeyboardButton(text="👥 Ver Como Fan")
+        ],
+        [
+            KeyboardButton(text="⬅️ Volver")
+        ]
+    ]
+    
+    return ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
+def get_explore_menu() -> ReplyKeyboardMarkup:
+    """Menú para explorar como fan"""
+    keyboard = [
+        [
+            KeyboardButton(text="🔍 Explorar Creadores"),
+            KeyboardButton(text="📺 Mis Catálogos")
+        ],
+        [
+            KeyboardButton(text="💰 Enviar Propina"),
+            KeyboardButton(text="🛒 Comprar PPV")
+        ],
+        [
+            KeyboardButton(text="⬅️ Volver")
+        ]
+    ]
+    
+    return ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
+def get_admin_menu() -> ReplyKeyboardMarkup:
+    """Menú de administración"""
+    keyboard = [
+        [
+            KeyboardButton(text="📊 Estadísticas"),
+            KeyboardButton(text="👥 Usuarios")
+        ],
+        [
+            KeyboardButton(text="💰 Comisiones"),
+            KeyboardButton(text="🚫 Baneos")
+        ],
+        [
+            KeyboardButton(text="📢 Anuncio Global"),
+            KeyboardButton(text="🔧 Configuración")
+        ],
+        [
+            KeyboardButton(text="⬅️ Volver")
+        ]
+    ]
+    
+    return ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
+# ==================== FUNCIONES LEGACY (Mantener compatibilidad) ====================
+
 def get_main_keyboard(user_id: int, username: str = None) -> ReplyKeyboardMarkup:
     """Genera el teclado principal según el rol del usuario"""
     creator = get_creator_by_id(user_id)
