@@ -330,10 +330,10 @@ async def cancel_creator_registration(callback: CallbackQuery, state: FSMContext
         reply_markup=get_main_menu(callback.from_user.username)
     )
 
-@router.callback_query(F.data.in_(["payout_stars", "payout_real"]))
+@router.callback_query(F.data == "payout_stars")
 async def process_payout_method(callback: CallbackQuery, state: FSMContext):
-    payout_method = "Stars" if callback.data == "payout_stars" else "Real"
-    await state.update_data(payout_method=payout_method)
+    # Solo manejamos Stars ahora
+    await state.update_data(payout_method="Stars")
     
     data = await state.get_data()
     

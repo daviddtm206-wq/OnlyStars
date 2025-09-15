@@ -387,10 +387,9 @@ def get_creator_photo_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 def get_creator_payout_keyboard() -> InlineKeyboardMarkup:
-    """Teclado para seleccionar método de pago"""
+    """Teclado para seleccionar método de pago (solo Stars)"""
     keyboard = [
-        [InlineKeyboardButton(text="⭐️ Stars (Telegram)", callback_data="payout_stars")],
-        [InlineKeyboardButton(text="💵 Dinero Real", callback_data="payout_real")],
+        [InlineKeyboardButton(text="⭐️ Confirmar - Solo Stars", callback_data="payout_stars")],
         [InlineKeyboardButton(text="❌ Cancelar Registro", callback_data="cancel_registration")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
