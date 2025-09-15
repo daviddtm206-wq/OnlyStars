@@ -630,7 +630,7 @@ async def cancel_edit(callback: CallbackQuery, state: FSMContext):
         "No se realizaron cambios en tu perfil."
     )
     await state.clear()
-@router.message(Command("mi_catalogo"))
+
 async def show_my_catalog(message: Message, state: FSMContext):
     """Muestra el catálogo del creador para gestionar su contenido"""
     if is_user_banned(message.from_user.id):
@@ -941,4 +941,63 @@ async def back_to_my_catalog(callback: CallbackQuery, state: FSMContext):
     })()
     
     await show_my_catalog(message_mock, state)
+
+@router.message(Command("mi_catalogo"))
+async def my_catalog_management(message: Message, state: FSMContext):
+    """Gestión del catálogo del creador - versión para teclado"""
+    if is_user_banned(message.from_user.id):
+        await message.answer("❌ Tu cuenta está baneada.")
+        return
+    
+    creator = get_creator_by_id(message.from_user.id)
+    if not creator:
+        await message.answer("❌ No estás registrado como creador.")
+        return
+    
+    # Obtener contenido PPV con estadísticas
+    ppv_content = get_ppv_content_with_stats(message.from_user.id)
+    
+    if not ppv_content:
+        await message.answer(
+            "📊 <b>MI CATÁLOGO PPV</b>\n\n"
+            "📝 Aún no has creado contenido PPV.\n\n"
+            "💡 <b>¿Cómo empezar?</b>\n"
+            "• Usa 📸 Crear PPV para subir tu primer contenido\n"
+            "• Puedes crear fotos, videos o álbumes\n"
+            "• Define precios personalizados en ⭐️ Stars\n\n"
+            "🚀 ¡Comienza a monetizar tu contenido ahora!"
+        )
+        return
+    
+    # Mostrar resumen del catálogo
+    total_content = len(ppv_content)
+    total_sales = sum(item[9] if len(item) > 9 else 0 for item in ppv_content)  # purchase_count
+    
+    catalog_text = f"📊 <b>MI CATÁLOGO PPV</b>\n\n"
+    catalog_text += f"📈 <b>Resumen:</b>\n"
+    catalog_text += f"📦 Total contenidos: {total_content}\n"
+    catalog_text += f"💰 Ventas totales: {total_sales}\n\n"
+    catalog_text += f"📋 <b>Contenidos recientes:</b>\n\n"
+    
+    # Mostrar últimos 5 contenidos
+    for i, content in enumerate(ppv_content[:5]):
+        content_id = content[0]
+        title = content[2]
+        price_stars = content[4] 
+        purchase_count = content[9] if len(content) > 9 else 0
+        album_type = content[8] if len(content) > 8 else 'single'
+        
+        content_type = "📁 Álbum" if album_type == 'album' else "📸 Individual"
+        catalog_text += f"{i+1}. {content_type} - {price_stars} ⭐️\n"
+        catalog_text += f"   💰 Ventas: {purchase_count}\n"
+        catalog_text += f"   🆔 ID: <code>{content_id}</code>\n\n"
+    
+    if total_content > 5:
+        catalog_text += f"... y {total_content - 5} contenidos más\n\n"
+    
+    catalog_text += "💡 Para gestionar contenidos específicos, usa:\n"
+    catalog_text += "• <code>/eliminar_ppv &lt;ID&gt;</code> - Eliminar contenido\n"
+    catalog_text += "• 📸 Crear PPV - Subir nuevo contenido"
+    
+    await message.answer(catalog_text)
 
