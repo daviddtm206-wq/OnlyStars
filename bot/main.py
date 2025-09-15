@@ -19,8 +19,15 @@ async def main():
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
+    # Validate BOT_TOKEN is present
+    bot_token = os.getenv("BOT_TOKEN")
+    if not bot_token:
+        logging.error("❌ BOT_TOKEN environment variable is required but not set!")
+        logging.error("Please set BOT_TOKEN in your environment or Replit Secrets.")
+        exit(1)
+    
     bot = Bot(
-        token=os.getenv("BOT_TOKEN"),
+        token=bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
     
