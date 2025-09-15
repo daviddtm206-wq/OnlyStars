@@ -277,3 +277,42 @@ def get_admin_keyboard() -> InlineKeyboardMarkup:
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def get_creator_card_keyboard(creator_id: int, current_page: int = 0, total_pages: int = 1) -> InlineKeyboardMarkup:
+    """Teclado inline para tarjeta de creador individual"""
+    keyboard = []
+    
+    # Botón principal de suscripción
+    keyboard.append([
+        InlineKeyboardButton(text="🌟 Suscribirme", callback_data=f"subscribe_{creator_id}")
+    ])
+    
+    # Botón de ver perfil completo
+    keyboard.append([
+        InlineKeyboardButton(text="👤 Ver Perfil Completo", callback_data=f"view_profile_{creator_id}")
+    ])
+    
+    # Navegación entre creadores si hay más de uno
+    if total_pages > 1:
+        nav_buttons = []
+        
+        if current_page > 0:
+            nav_buttons.append(InlineKeyboardButton(text="◀️ Anterior", callback_data=f"creator_prev_{current_page}"))
+        
+        # Mostrar página actual
+        nav_buttons.append(InlineKeyboardButton(text=f"📄 {current_page + 1}/{total_pages}", callback_data="page_info"))
+        
+        if current_page < total_pages - 1:
+            nav_buttons.append(InlineKeyboardButton(text="▶️ Siguiente", callback_data=f"creator_next_{current_page}"))
+        
+        keyboard.append(nav_buttons)
+    
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def get_subscription_confirmation_keyboard(creator_id: int, price: int) -> InlineKeyboardMarkup:
+    """Teclado de confirmación de suscripción"""
+    keyboard = [
+        [InlineKeyboardButton(text=f"✅ Confirmar Suscripción ({price} ⭐️)", callback_data=f"confirm_sub_{creator_id}")],
+        [InlineKeyboardButton(text="❌ Cancelar", callback_data="cancel_subscription")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)

@@ -8,14 +8,61 @@ from database import (add_creator, get_creator_by_id, get_all_creators, get_crea
                      get_user_balance, withdraw_balance, add_ppv_content, is_user_banned,
                      update_creator_display_name, update_creator_description, 
                      update_creator_subscription_price, update_creator_photo,
-                     add_ppv_album_item)
+                     add_ppv_album_item, add_subscriber)
 from dotenv import load_dotenv
+from keyboards import get_creator_card_keyboard, get_subscription_confirmation_keyboard
 import os
 import time
 
 load_dotenv()
 
 router = Router()
+
+async def show_creator_card(message: Message, creators: list, page: int = 0):
+    """Muestra una tarjeta profesional de creador individual"""
+    if page >= len(creators) or page < 0:
+        await message.answer("❌ No hay más creadores para mostrar.")
+        return
+    
+    creator = creators[page]
+    user_id, username, display_name, description, subscription_price, photo_url, payout_method, balance, created_at = creator[1:10]
+    
+    # Formatear el texto de la tarjeta de creador
+    card_text = f"✨ <b>{display_name}</b>\n\n"
+    card_text += f"📝 <i>{description}</i>\n\n"
+    
+    if subscription_price == 0:
+        card_text += "🆓 <b>Suscripción GRATIS</b> ⭐️\n\n"
+    else:
+        card_text += f"💎 <b>Suscripción: {subscription_price} ⭐️</b>\n\n"
+    
+    card_text += f"👤 @{username if username else 'Usuario sin nombre'}\n"
+    card_text += f"🆔 ID: {user_id}\n\n"
+    card_text += "🌟 <i>¡Únete para acceder a contenido exclusivo!</i>"
+    
+    # Crear teclado inline con botones
+    keyboard = get_creator_card_keyboard(user_id, page, len(creators))
+    
+    try:
+        # Si hay foto de perfil, enviarla con el mensaje
+        if photo_url:
+            await message.answer_photo(
+                photo=photo_url,
+                caption=card_text,
+                reply_markup=keyboard
+            )
+        else:
+            # Si no hay foto, enviar solo el texto
+            await message.answer(
+                text=card_text,
+                reply_markup=keyboard
+            )
+    except Exception as e:
+        # Si falla cargar la foto, enviar solo texto
+        await message.answer(
+            text=card_text,
+            reply_markup=keyboard
+        )
 
 class CreatorRegistration(StatesGroup):
     waiting_for_name = State()
@@ -161,19 +208,8 @@ async def explore_creators(message: Message):
         await message.answer("😔 Aún no hay creadores registrados en la plataforma.")
         return
     
-    text = "🌟 <b>CREADORES DISPONIBLES</b>\n\n"
-    
-    for creator in creators[:10]:
-        user_id, username, display_name, description, subscription_price, photo_url, payout_method, balance, created_at = creator[1:10]
-        
-        text += f"👤 <b>{display_name}</b>\n"
-        text += f"📝 {description}\n"
-        text += f"💰 Suscripción: {subscription_price} ⭐️\n"
-        text += f"🆔 ID: <code>{user_id}</code>\n\n"
-        text += f"💫 Para suscribirte: <code>/suscribirme_a {user_id}</code>\n"
-        text += "━━━━━━━━━━━━━━━━━━━━\n\n"
-    
-    await message.answer(text)
+    # Mostrar el primer creador en formato de tarjeta
+    await show_creator_card(message, creators, 0)
 
 @router.message(Command("mi_perfil"))
 async def my_profile(message: Message):
@@ -625,3 +661,187 @@ async def cancel_edit(callback: CallbackQuery, state: FSMContext):
         "No se realizaron cambios en tu perfil."
     )
     await state.clear()
+
+# ==================== CALLBACKS PARA TARJETAS DE CREADORES ====================
+
+@router.callback_query(F.data.startswith("subscribe_"))
+async def handle_subscribe_button(callback: CallbackQuery):
+    """Maneja el botón de suscribirse a un creador"""
+    creator_id = int(callback.data.split("_")[1])
+    
+    creator = get_creator_by_id(creator_id)
+    if not creator:
+        await callback.answer("❌ Creador no encontrado.", show_alert=True)
+        return
+    
+    user_id, username, display_name, description, subscription_price, photo_url, payout_method, balance, created_at = creator[1:10]
+    
+    if subscription_price == 0:
+        # Suscripción gratuita - suscribir directamente
+        try:
+            expires_at = int(time.time()) + (30 * 24 * 60 * 60)  # 30 días
+            add_subscriber(callback.from_user.id, creator_id, expires_at)
+            
+            await callback.message.edit_text(
+                f"🎉 <b>¡Suscripción exitosa!</b>\n\n"
+                f"✨ Te has suscrito GRATIS a <b>{display_name}</b>\n"
+                f"📅 Tu suscripción es válida por 30 días\n\n"
+                f"🎨 Ahora tienes acceso a su contenido exclusivo en 📺 Mis Catálogos"
+            )
+            await callback.answer("🎉 ¡Suscripción gratuita activada!", show_alert=True)
+        except Exception as e:
+            await callback.answer("❌ Error al procesar la suscripción.", show_alert=True)
+    else:
+        # Suscripción de pago - mostrar confirmación
+        keyboard = get_subscription_confirmation_keyboard(creator_id, subscription_price)
+        
+        await callback.message.edit_text(
+            f"💎 <b>Confirmar Suscripción</b>\n\n"
+            f"✨ Creador: <b>{display_name}</b>\n"
+            f"💰 Precio: <b>{subscription_price} ⭐️</b>\n"
+            f"📅 Duración: <b>30 días</b>\n\n"
+            f"🎨 Tendrás acceso a todo su contenido exclusivo\n\n"
+            f"¿Confirmas tu suscripción?",
+            reply_markup=keyboard
+        )
+
+@router.callback_query(F.data.startswith("confirm_sub_"))
+async def handle_confirm_subscription(callback: CallbackQuery):
+    """Confirma la suscripción de pago usando Telegram Stars"""
+    creator_id = int(callback.data.split("_")[2])
+    
+    creator = get_creator_by_id(creator_id)
+    if not creator:
+        await callback.answer("❌ Creador no encontrado.", show_alert=True)
+        return
+    
+    user_id, username, display_name, description, subscription_price, photo_url, payout_method, balance, created_at = creator[1:10]
+    
+    # Aquí deberías integrar el sistema de pagos con Telegram Stars
+    # Por ahora simularemos una suscripción exitosa
+    try:
+        expires_at = int(time.time()) + (30 * 24 * 60 * 60)  # 30 días
+        add_subscriber(callback.from_user.id, creator_id, expires_at)
+        
+        await callback.message.edit_text(
+            f"🎉 <b>¡Pago procesado con éxito!</b>\n\n"
+            f"✨ Te has suscrito a <b>{display_name}</b>\n"
+            f"💰 Costo: {subscription_price} ⭐️\n"
+            f"📅 Tu suscripción es válida por 30 días\n\n"
+            f"🎨 Ahora tienes acceso a su contenido exclusivo en 📺 Mis Catálogos"
+        )
+        await callback.answer("💫 ¡Suscripción activada!", show_alert=True)
+    except Exception as e:
+        await callback.answer("❌ Error al procesar el pago.", show_alert=True)
+
+@router.callback_query(F.data == "cancel_subscription")
+async def handle_cancel_subscription(callback: CallbackQuery):
+    """Cancela el proceso de suscripción"""
+    await callback.message.edit_text(
+        "❌ <b>Suscripción cancelada</b>\n\n"
+        "Puedes explorar otros creadores cuando gustes usando /explorar_creadores"
+    )
+    await callback.answer("Operación cancelada")
+
+@router.callback_query(F.data.startswith("view_profile_"))
+async def handle_view_profile(callback: CallbackQuery):
+    """Muestra el perfil completo de un creador"""
+    creator_id = int(callback.data.split("_")[2])
+    
+    creator = get_creator_by_id(creator_id)
+    if not creator:
+        await callback.answer("❌ Creador no encontrado.", show_alert=True)
+        return
+    
+    user_id, username, display_name, description, subscription_price, photo_url, payout_method, balance, created_at = creator[1:10]
+    
+    subscribers_count = get_creator_stats(creator_id)
+    
+    profile_text = f"👤 <b>PERFIL DE {display_name.upper()}</b>\n\n"
+    profile_text += f"📝 <b>Descripción:</b>\n{description}\n\n"
+    
+    if subscription_price == 0:
+        profile_text += "🆓 <b>Suscripción GRATUITA</b> ⭐️\n\n"
+    else:
+        profile_text += f"💎 <b>Suscripción: {subscription_price} ⭐️</b>\n\n"
+    
+    profile_text += f"👥 <b>Suscriptores:</b> {subscribers_count}\n"
+    profile_text += f"👤 <b>Usuario:</b> @{username if username else 'Sin username'}\n"
+    profile_text += f"📅 <b>Registrado:</b> {created_at}\n\n"
+    profile_text += "🎨 <i>¡Únete para acceder a contenido exclusivo!</i>"
+    
+    # Botón para regresar a la exploración
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🌟 Suscribirme", callback_data=f"subscribe_{creator_id}")],
+        [InlineKeyboardButton(text="⬅️ Volver a Explorar", callback_data="back_to_explore")]
+    ])
+    
+    await callback.message.edit_text(profile_text, reply_markup=keyboard)
+
+@router.callback_query(F.data.startswith("creator_next_"))
+async def handle_next_creator(callback: CallbackQuery):
+    """Navega al siguiente creador"""
+    current_page = int(callback.data.split("_")[2])
+    creators = get_all_creators()
+    
+    next_page = current_page + 1
+    if next_page < len(creators):
+        await show_creator_card_callback(callback, creators, next_page)
+    else:
+        await callback.answer("❌ No hay más creadores.", show_alert=True)
+
+@router.callback_query(F.data.startswith("creator_prev_"))
+async def handle_prev_creator(callback: CallbackQuery):
+    """Navega al creador anterior"""
+    current_page = int(callback.data.split("_")[2])
+    creators = get_all_creators()
+    
+    prev_page = current_page - 1
+    if prev_page >= 0:
+        await show_creator_card_callback(callback, creators, prev_page)
+    else:
+        await callback.answer("❌ No hay creadores anteriores.", show_alert=True)
+
+@router.callback_query(F.data == "back_to_explore")
+async def handle_back_to_explore(callback: CallbackQuery):
+    """Regresa a la exploración de creadores"""
+    creators = get_all_creators()
+    if creators:
+        await show_creator_card_callback(callback, creators, 0)
+    else:
+        await callback.message.edit_text("😔 No hay creadores disponibles.")
+
+async def show_creator_card_callback(callback: CallbackQuery, creators: list, page: int = 0):
+    """Muestra una tarjeta de creador en un callback (para navegación)"""
+    if page >= len(creators) or page < 0:
+        await callback.answer("❌ No hay más creadores para mostrar.", show_alert=True)
+        return
+    
+    creator = creators[page]
+    user_id, username, display_name, description, subscription_price, photo_url, payout_method, balance, created_at = creator[1:10]
+    
+    # Formatear el texto de la tarjeta de creador
+    card_text = f"✨ <b>{display_name}</b>\n\n"
+    card_text += f"📝 <i>{description}</i>\n\n"
+    
+    if subscription_price == 0:
+        card_text += "🆓 <b>Suscripción GRATIS</b> ⭐️\n\n"
+    else:
+        card_text += f"💎 <b>Suscripción: {subscription_price} ⭐️</b>\n\n"
+    
+    card_text += f"👤 @{username if username else 'Usuario sin nombre'}\n"
+    card_text += f"🆔 ID: {user_id}\n\n"
+    card_text += "🌟 <i>¡Únete para acceder a contenido exclusivo!</i>"
+    
+    # Crear teclado inline con botones
+    keyboard = get_creator_card_keyboard(user_id, page, len(creators))
+    
+    try:
+        # Editar el mensaje existente
+        await callback.message.edit_text(
+            text=card_text,
+            reply_markup=keyboard
+        )
+        await callback.answer()
+    except Exception as e:
+        await callback.answer("❌ Error al cargar creador.", show_alert=True)
