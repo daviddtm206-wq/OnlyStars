@@ -125,6 +125,117 @@ async def handle_admin_panel(message: Message, state: FSMContext):
     await NavigationManager.push_state(MenuState.ADMIN, state)
     await show_menu(MenuState.ADMIN, message, state)
 
+# ==================== HANDLERS DEL MENÚ ADMIN ====================
+
+@router.message(F.text == "📊 Estadísticas")
+async def handle_admin_stats(message: Message, state: FSMContext):
+    """Manejar selección de 'Estadísticas' del admin panel"""
+    username = message.from_user.username
+    if not is_admin_user(username):
+        await message.answer("❌ No tienes permisos de administrador.")
+        return
+    
+    from admin_handlers import admin_panel
+    await admin_panel(message)
+
+@router.message(F.text == "👥 Usuarios")
+async def handle_admin_users(message: Message, state: FSMContext):
+    """Manejar selección de 'Usuarios' del admin panel"""
+    username = message.from_user.username
+    if not is_admin_user(username):
+        await message.answer("❌ No tienes permisos de administrador.")
+        return
+    
+    await message.answer(
+        "👥 <b>GESTIÓN DE USUARIOS</b>\n\n"
+        "📋 <b>Comandos disponibles:</b>\n"
+        "• <code>/banear_usuario &lt;user_id&gt;</code> - Banear usuario\n"
+        "• <code>/desbanear_usuario &lt;user_id&gt;</code> - Desbanear usuario\n"
+        "• <code>/ver_usuario &lt;user_id&gt;</code> - Ver información del usuario\n\n"
+        "💡 <b>Para encontrar user_id:</b>\n"
+        "Pide al usuario que te envíe cualquier mensaje y verás su ID en los logs del bot."
+    )
+
+@router.message(F.text == "💰 Comisiones")
+async def handle_admin_commissions(message: Message, state: FSMContext):
+    """Manejar selección de 'Comisiones' del admin panel"""
+    username = message.from_user.username
+    if not is_admin_user(username):
+        await message.answer("❌ No tienes permisos de administrador.")
+        return
+    
+    await message.answer(
+        "💰 <b>GESTIÓN DE COMISIONES</b>\n\n"
+        "📊 <b>Configuración actual:</b>\n"
+        "• Comisión de plataforma: 20%\n"
+        "• Moneda: Telegram Stars (XTR)\n"
+        "• Tasa de cambio: $0.013 por estrella\n"
+        "• Retiro mínimo: 1000 ⭐️\n\n"
+        "💡 Para cambiar la configuración de comisiones, edita las variables de entorno en el código."
+    )
+
+@router.message(F.text == "🚫 Baneos")
+async def handle_admin_bans(message: Message, state: FSMContext):
+    """Manejar selección de 'Baneos' del admin panel"""
+    username = message.from_user.username
+    if not is_admin_user(username):
+        await message.answer("❌ No tienes permisos de administrador.")
+        return
+    
+    await message.answer(
+        "🚫 <b>GESTIÓN DE BANEOS</b>\n\n"
+        "📋 <b>Comandos de moderación:</b>\n"
+        "• <code>/banear_usuario &lt;user_id&gt;</code> - Banear usuario\n"
+        "• <code>/desbanear_usuario &lt;user_id&gt;</code> - Desbanear usuario\n"
+        "• <code>/lista_baneados</code> - Ver usuarios baneados\n\n"
+        "⚠️ <b>Los usuarios baneados:</b>\n"
+        "• No pueden usar el bot\n"
+        "• No pueden realizar transacciones\n"
+        "• No pueden acceder a contenido"
+    )
+
+@router.message(F.text == "📢 Anuncio Global")
+async def handle_admin_broadcast(message: Message, state: FSMContext):
+    """Manejar selección de 'Anuncio Global' del admin panel"""
+    username = message.from_user.username
+    if not is_admin_user(username):
+        await message.answer("❌ No tienes permisos de administrador.")
+        return
+    
+    await message.answer(
+        "📢 <b>ANUNCIO GLOBAL</b>\n\n"
+        "🔊 Para enviar un mensaje a todos los usuarios del bot:\n\n"
+        "📝 <b>Formato:</b>\n"
+        "<code>/anuncio_global &lt;mensaje&gt;</code>\n\n"
+        "📌 <b>Ejemplo:</b>\n"
+        "<code>/anuncio_global ¡Nueva función disponible! Ahora puedes crear catálogos personalizados.</code>\n\n"
+        "⚠️ <b>Importante:</b>\n"
+        "• El mensaje se enviará a TODOS los usuarios registrados\n"
+        "• Úsalo con moderación para evitar spam"
+    )
+
+@router.message(F.text == "🔧 Configuración")
+async def handle_admin_config(message: Message, state: FSMContext):
+    """Manejar selección de 'Configuración' del admin panel"""
+    username = message.from_user.username
+    if not is_admin_user(username):
+        await message.answer("❌ No tienes permisos de administrador.")
+        return
+    
+    await message.answer(
+        "🔧 <b>CONFIGURACIÓN DEL SISTEMA</b>\n\n"
+        "⚙️ <b>Variables actuales:</b>\n"
+        "• Comisión: 20%\n"
+        "• Moneda: XTR (Telegram Stars)\n"
+        "• Retiro mínimo: 1000 ⭐️\n"
+        "• Modo de retiro: REAL\n\n"
+        "📋 <b>Comandos de configuración:</b>\n"
+        "• <code>/config_comision &lt;porcentaje&gt;</code>\n"
+        "• <code>/config_retiro_min &lt;cantidad&gt;</code>\n"
+        "• <code>/reiniciar_base_datos</code> (¡CUIDADO!)\n\n"
+        "⚠️ <b>Los cambios requieren reiniciar el bot</b>"
+    )
+
 # ==================== HANDLER PARA VOLVER ====================
 
 @router.message(F.text == "⬅️ Volver")
