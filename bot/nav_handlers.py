@@ -37,16 +37,16 @@ async def show_menu(state: MenuState, message: Message, context: FSMContext):
             )
             keyboard = get_creator_onboarding_menu()
         else:
-            # Creador ya registrado - mostrar menú profesional con botones inline
+            # Creador ya registrado - mostrar menú profesional con botones del TECLADO
             text = (
                 f"🎨 <b>PANEL DE CREADOR</b>\n\n"
                 f"¡Hola {creator[3]}! 👋\n\n"
                 f"📊 <b>Tu perfil está activo</b>\n"
                 f"💰 Precio de suscripción: {creator[4]} ⭐️\n"
                 f"👥 Suscriptores activos: {creator[6] if len(creator) > 6 else 0}\n\n"
-                f"💫 <b>¿Qué deseas gestionar hoy?</b>"
+                f"💡 <i>Usa los botones del teclado de abajo para navegar.</i>"
             )
-            keyboard = get_creator_profile_main_keyboard()
+            keyboard = get_creator_menu()  # Usar teclado en lugar de inline
         
     elif state == MenuState.EXPLORE:
         text = "🔍 <b>EXPLORAR CREADORES</b>\n\nDescubre contenido exclusivo y conecta con tus creadores favoritos"
