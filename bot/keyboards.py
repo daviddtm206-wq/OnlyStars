@@ -64,6 +64,32 @@ def get_creator_menu() -> ReplyKeyboardMarkup:
         one_time_keyboard=False
     )
 
+def get_creator_profile_menu() -> ReplyKeyboardMarkup:
+    """Submenú profesional para gestión del perfil de creador"""
+    keyboard = [
+        [
+            KeyboardButton(text="💰 Ver Balance"),
+            KeyboardButton(text="💸 Retirar Ganancias")
+        ],
+        [
+            KeyboardButton(text="🎥 Crear Contenido PPV"),
+            KeyboardButton(text="✏️ Editar Perfil")
+        ],
+        [
+            KeyboardButton(text="📊 Mi Catálogo"),
+            KeyboardButton(text="📈 Mis Estadísticas")
+        ],
+        [
+            KeyboardButton(text="🔙 Volver al Menú")
+        ]
+    ]
+    
+    return ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
 def get_explore_menu() -> ReplyKeyboardMarkup:
     """Menú para explorar como fan"""
     keyboard = [
