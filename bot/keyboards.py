@@ -16,7 +16,7 @@ def is_admin_user(username: str) -> bool:
 
 # ==================== MENÚS JERÁRQUICOS ====================
 
-def get_main_menu(username: str = None) -> ReplyKeyboardMarkup:
+def get_main_menu(username: str | None = None) -> ReplyKeyboardMarkup:
     """Menú principal simple y limpio"""
     keyboard = [
         [

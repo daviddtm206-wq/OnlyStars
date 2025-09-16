@@ -473,7 +473,7 @@ async def show_purchased_content(callback: CallbackQuery):
     except Exception as e:
         await callback.message.answer(f"✅ <b>{title}</b>\n\n📝 {description}\n\n❌ Error mostrando el contenido multimedia.")
 
-async def process_ppv_purchase(user_id: int, content_id: int, bot, chat_id: int, message_id: int = None):
+async def process_ppv_purchase(user_id: int, content_id: int, bot, chat_id: int, message_id: int | None = None):
     """Función reutilizable para procesar compras de contenido PPV"""
     if is_user_banned(user_id):
         await bot.send_message(chat_id, "❌ Tu cuenta está baneada.")
@@ -595,5 +595,5 @@ async def explore_creators(callback: CallbackQuery):
         return
         
     # Mostrar lista de creadores disponibles
-    from .creator_handlers import show_available_creators
+    from creator_handlers import show_available_creators
     await show_available_creators(callback.message, edit=True)
