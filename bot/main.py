@@ -6,6 +6,7 @@ from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from handlers import router
+from database import init_db
 
 from dotenv import load_dotenv
 import os
@@ -36,6 +37,14 @@ async def main():
     dp = Dispatcher(storage=storage)
     dp.include_router(router)
 
+    # Initialize database
+    try:
+        init_db()
+        logging.info("✅ Database initialized successfully")
+    except Exception as e:
+        logging.error(f"❌ Database initialization failed: {e}")
+        exit(1)
+    
     print(f"🤖 Bot iniciado: @{(await bot.get_me()).username}")
     print("📊 Base de datos inicializada")
     print("💫 Esperando mensajes...")
