@@ -104,7 +104,14 @@ async def keyboard_buy_ppv(message: Message):
 @router.message(F.text == "👤 Mi Perfil")
 async def keyboard_my_profile(message: Message):
     from creator_handlers import my_profile
+    from keyboards import get_creator_profile_menu
     await my_profile(message)
+    # Cambiar al submenú del perfil
+    await message.answer(
+        "🎛️ <b>PANEL DE CONTROL</b>\n\n"
+        "Selecciona una opción del menú:",
+        reply_markup=get_creator_profile_menu()
+    )
 
 @router.message(F.text == "💎 Balance")
 async def keyboard_balance(message: Message):
@@ -180,6 +187,87 @@ async def keyboard_back_to_creator(message: Message, state: FSMContext):
         f"🎨 <b>PANEL DE CREADOR RESTAURADO</b>\n\n"
         f"Bienvenido de vuelta, {creator[3]}!\n"
         f"Tu panel de creador está activo nuevamente.",
+        reply_markup=keyboard
+    )
+
+# ==================== HANDLERS PARA SUBMENÚ DE PERFIL ====================
+
+@router.message(F.text == "💰 Ver Balance")
+async def profile_check_balance(message: Message):
+    from creator_handlers import check_balance
+    await check_balance(message)
+
+@router.message(F.text == "💸 Retirar Ganancias")
+async def profile_withdraw_menu(message: Message):
+    if is_user_banned(message.from_user.id):
+        await message.answer("❌ Tu cuenta está baneada.")
+        return
+    
+    creator = get_creator_by_id(message.from_user.id)
+    if not creator:
+        await message.answer("❌ No estás registrado como creador.")
+        return
+    
+    await message.answer(
+        "💸 <b>RETIRAR GANANCIAS</b>\n\n"
+        "Para retirar tus ganancias, usa:\n"
+        "<code>/retirar &lt;monto&gt;</code>\n\n"
+        "📌 <b>Ejemplo:</b>\n"
+        "<code>/retirar 1000</code>\n\n"
+        "💡 Verifica tu balance primero con '💰 Ver Balance'"
+    )
+
+@router.message(F.text == "🎥 Crear Contenido PPV")
+async def profile_create_ppv(message: Message, state: FSMContext):
+    from creator_handlers import create_ppv_content
+    await create_ppv_content(message, state)
+
+@router.message(F.text == "✏️ Editar Perfil")
+async def profile_edit_profile(message: Message):
+    from creator_handlers import edit_profile_menu
+    await edit_profile_menu(message)
+
+@router.message(F.text == "📈 Mis Estadísticas")
+async def profile_my_stats(message: Message):
+    if is_user_banned(message.from_user.id):
+        await message.answer("❌ Tu cuenta está baneada.")
+        return
+    
+    creator = get_creator_by_id(message.from_user.id)
+    if not creator:
+        await message.answer("❌ No estás registrado como creador.")
+        return
+    
+    await message.answer(
+        "📈 <b>MIS ESTADÍSTICAS</b>\n\n"
+        "Esta función estará disponible pronto.\n"
+        "Podrás ver estadísticas detalladas de:\n"
+        "• Ingresos por mes\n"
+        "• Crecimiento de suscriptores\n"
+        "• Contenido más popular\n"
+        "• Y mucho más..."
+    )
+
+@router.message(F.text == "🔙 Volver al Menú")
+async def profile_back_to_main(message: Message, state: FSMContext):
+    if is_user_banned(message.from_user.id):
+        await message.answer("❌ Tu cuenta está baneada.")
+        return
+    
+    creator = get_creator_by_id(message.from_user.id)
+    if not creator:
+        await message.answer("❌ No estás registrado como creador.")
+        return
+    
+    # Resetear navegación al menú principal
+    await NavigationManager.reset_to_main(state)
+    username = message.from_user.username
+    keyboard = get_main_menu(username)
+    
+    await message.answer(
+        f"🎨 <b>MENÚ PRINCIPAL</b>\n\n"
+        f"Bienvenido de vuelta, {creator[3]}!\n"
+        f"Usa los botones para navegar por las opciones.",
         reply_markup=keyboard
     )
 
