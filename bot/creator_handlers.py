@@ -404,9 +404,22 @@ async def my_profile(message: Message):
         )
         return
     
-    user_id, username, display_name, description, subscription_price, photo_url, payout_method, balance_stars, created_at = creator[1:10]
+    # Extraer datos del creador por índice específico para evitar confusiones
+    user_id = creator[1]           # user_id  
+    username = creator[2]          # username
+    display_name = creator[3]      # display_name
+    description = creator[4]       # description  
+    subscription_price = creator[5] # subscription_price
+    photo_url = creator[6]         # photo_url
+    payout_method = creator[7]     # payout_method
+    balance_stars = creator[8]     # balance_stars
+    created_at = creator[9]        # created_at
     
+    # Obtener número de suscriptores activos de forma segura
     subscribers_count = get_creator_stats(message.from_user.id)
+    if not isinstance(subscribers_count, int):
+        subscribers_count = 0
+        
     balance_usd = balance_stars * float(os.getenv("EXCHANGE_RATE", 0.013))
     
     text = f"👤 <b>TU PERFIL DE CREADOR</b>\n\n"
