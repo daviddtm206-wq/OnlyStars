@@ -98,8 +98,7 @@ def get_explore_menu() -> ReplyKeyboardMarkup:
             KeyboardButton(text="📺 Mis Catálogos")
         ],
         [
-            KeyboardButton(text="💰 Enviar Propina"),
-            KeyboardButton(text="🛒 Comprar PPV")
+            KeyboardButton(text="💰 Enviar Propina")
         ],
         [
             KeyboardButton(text="⬅️ Volver")
@@ -209,7 +208,6 @@ def get_main_keyboard(user_id: int, username: str = None) -> ReplyKeyboardMarkup
                 KeyboardButton(text="💰 Enviar Propina")
             ],
             [
-                KeyboardButton(text="🛒 Comprar PPV"),
                 KeyboardButton(text="ℹ️ Ayuda")
             ]
         ]
@@ -233,8 +231,7 @@ def get_fan_keyboard() -> ReplyKeyboardMarkup:
             KeyboardButton(text="📺 Mis Catálogos")
         ],
         [
-            KeyboardButton(text="💰 Enviar Propina"),
-            KeyboardButton(text="🛒 Comprar PPV")
+            KeyboardButton(text="💰 Enviar Propina")
         ],
         [
             KeyboardButton(text="ℹ️ Ayuda"),
