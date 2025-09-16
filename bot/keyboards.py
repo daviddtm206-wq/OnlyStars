@@ -357,11 +357,6 @@ def get_creator_card_keyboard(creator_id: int, current_page: int = 0, total_page
         InlineKeyboardButton(text="🌟 Suscribirme", callback_data=f"subscribe_{creator_id}")
     ])
     
-    # Botón de ver perfil completo
-    keyboard.append([
-        InlineKeyboardButton(text="👤 Ver Perfil Completo", callback_data=f"view_profile_{creator_id}")
-    ])
-    
     # Navegación entre creadores si hay más de uno
     if total_pages > 1:
         nav_buttons = []

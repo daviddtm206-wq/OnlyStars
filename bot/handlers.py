@@ -87,19 +87,6 @@ async def keyboard_send_tip(message: Message):
         "💡 Puedes encontrar el ID de los creadores en 🔍 Explorar Creadores"
     )
 
-@router.message(F.text == "🛒 Comprar PPV")
-async def keyboard_buy_ppv(message: Message):
-    await message.answer(
-        "🛒 <b>COMPRAR CONTENIDO PPV</b>\n\n"
-        "Para comprar contenido PPV de un creador, usa:\n"
-        "<code>/comprar_ppv &lt;ID_contenido&gt;</code>\n\n"
-        "📌 <b>Ejemplo:</b>\n"
-        "<code>/comprar_ppv 42</code>\n\n"
-        "💡 <b>¿Dónde encuentro contenido PPV?</b>\n"
-        "• En 📺 Mis Catálogos (si estás suscrito)\n"
-        "• En perfiles de creadores públicos\n"
-        "• En anuncios de creadores"
-    )
 
 @router.message(F.text == "👤 Mi Perfil")
 async def keyboard_my_profile(message: Message):

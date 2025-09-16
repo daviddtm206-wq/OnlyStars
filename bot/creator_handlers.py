@@ -921,42 +921,6 @@ async def handle_cancel_subscription(callback: CallbackQuery):
     )
     await callback.answer("Operación cancelada")
 
-@router.callback_query(F.data.startswith("view_profile_"))
-async def handle_view_profile(callback: CallbackQuery):
-    """Muestra el perfil completo de un creador"""
-    creator_id = int(callback.data.split("_")[2])
-    
-    creator = get_creator_by_id(creator_id)
-    if not creator:
-        await callback.answer("❌ Creador no encontrado.", show_alert=True)
-        return
-    
-    user_id, username, display_name, description, subscription_price, photo_url, payout_method, balance, created_at = creator[1:10]
-    
-    subscribers_count = get_creator_stats(creator_id)
-    
-    profile_text = f"👤 <b>PERFIL DE {display_name.upper()}</b>\n\n"
-    profile_text += f"📝 <b>Descripción:</b>\n{description}\n\n"
-    
-    if subscription_price == 0:
-        profile_text += "🆓 <b>Suscripción GRATUITA</b> ⭐️\n\n"
-    else:
-        profile_text += f"💎 <b>Suscripción: {subscription_price} ⭐️</b>\n\n"
-    
-    profile_text += f"👥 <b>Suscriptores:</b> {subscribers_count}\n"
-    profile_text += f"👤 <b>Usuario:</b> @{username if username else 'Sin username'}\n"
-    profile_text += f"📅 <b>Registrado:</b> {created_at}\n\n"
-    profile_text += "🎨 <i>¡Únete para acceder a contenido exclusivo!</i>"
-    
-    # Botón para regresar a la exploración
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🌟 Suscribirme", callback_data=f"subscribe_{creator_id}")],
-        [InlineKeyboardButton(text="⬅️ Volver a Explorar", callback_data="back_to_explore")]
-    ])
-    
-    # Borrar mensaje anterior y enviar uno nuevo
-    await callback.message.delete()
-    await callback.message.answer(profile_text, reply_markup=keyboard)
 
 @router.callback_query(F.data.startswith("creator_next_"))
 async def handle_next_creator(callback: CallbackQuery):
