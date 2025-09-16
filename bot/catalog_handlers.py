@@ -90,13 +90,22 @@ async def build_catalogs_view(user_id: int) -> dict:
             "keyboard": None
         }
     
-    # Crear botones para cada creador al que está suscrito
+    # Crear botones para cada creador al que está suscrito (evitar duplicados)
     keyboard = []
     catalog_text = "🎬 <b>MIS CATÁLOGOS EXCLUSIVOS</b>\n\n"
     catalog_text += "Tienes acceso a los siguientes catálogos privados:\n\n"
     
+    # Usar un set para evitar creadores duplicados
+    seen_creators = set()
+    
     for subscription in subscriptions:
         creator_id = subscription[2]  # creator_id está en la posición 2
+        
+        # Si ya hemos procesado este creador, saltarlo
+        if creator_id in seen_creators:
+            continue
+            
+        seen_creators.add(creator_id)
         creator = get_creator_by_id(creator_id)
         
         if creator:
