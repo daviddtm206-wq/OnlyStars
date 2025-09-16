@@ -138,9 +138,33 @@ async def keyboard_my_catalog(message: Message):
         )
         return
     
-    # Importar y ejecutar función de gestión de catálogo
-    from admin_handlers import my_catalog_management
-    await my_catalog_management(message)
+    # Mostrar catálogo personal del creador
+    from database import get_ppv_by_creator
+    content_list = get_ppv_by_creator(message.from_user.id)
+    
+    if not content_list:
+        catalog_text = (
+            f"📊 <b>MI CATÁLOGO</b>\n\n"
+            f"📭 <b>No tienes contenido PPV aún</b>\n\n"
+            f"💡 <b>¡Empieza a crear!</b>\n"
+            f"Usa '📸 Crear PPV' para subir tu primer contenido y comenzar a ganar dinero.\n\n"
+            f"🎯 <b>Tipos de contenido:</b>\n"
+            f"• Fotos exclusivas\n"
+            f"• Videos premium\n"
+            f"• Álbumes temáticos"
+        )
+    else:
+        catalog_text = f"📊 <b>MI CATÁLOGO</b>\n\n📈 <b>Total de contenido:</b> {len(content_list)} elementos\n\n"
+        
+        for i, content in enumerate(content_list[:5], 1):  # Mostrar máximo 5
+            catalog_text += f"🎯 <b>{i}.</b> {content[3]} - {content[4]} ⭐️\n"
+        
+        if len(content_list) > 5:
+            catalog_text += f"\n... y {len(content_list) - 5} más\n"
+        
+        catalog_text += f"\n💡 <i>Usa '📸 Crear PPV' para agregar más contenido</i>"
+    
+    await message.answer(catalog_text)
 
 @router.message(F.text == "⚙️ Editar Perfil")
 async def keyboard_edit_profile(message: Message):
