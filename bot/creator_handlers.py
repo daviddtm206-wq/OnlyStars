@@ -416,11 +416,7 @@ async def my_profile(message: Message):
     text += f"👥 Suscriptores activos: {subscribers_count}\n"
     text += f"💎 Balance: {balance_stars} ⭐️ (${balance_usd:.2f})\n"
     text += f"💳 Método de retiro: {payout_method}\n\n"
-    text += f"🔧 Comandos disponibles:\n"
-    text += f"• /balance - Ver saldo detallado\n"
-    text += f"• /retirar &lt;monto&gt; - Retirar ganancias\n"
-    text += f"• /crear_contenido_ppv - Crear contenido PPV\n"
-    text += f"• /editar_perfil - Editar información del perfil"
+    text += f"💡 <i>Usa los botones del menú para acceder a todas las funciones disponibles.</i>"
     
     if photo_url:
         await message.answer_photo(photo=photo_url, caption=text)
