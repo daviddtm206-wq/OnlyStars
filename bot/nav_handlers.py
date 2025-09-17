@@ -80,7 +80,7 @@ async def show_menu(state: MenuState, message: Message, context: FSMContext):
             "🆘 <b>¿Necesitas más ayuda?</b>\n"
             "Contacta con el soporte del bot"
         )
-        keyboard = get_main_menu(username)
+        keyboard = get_main_keyboard(message.from_user.id, username)
     
     await message.answer(text, reply_markup=keyboard)
 

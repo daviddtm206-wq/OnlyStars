@@ -192,7 +192,7 @@ async def keyboard_back_to_creator(message: Message, state: FSMContext):
     # Resetear navegación al menú principal usando el nuevo sistema
     await NavigationManager.reset_to_main(state)
     username = message.from_user.username
-    keyboard = get_main_menu(username)
+    keyboard = get_main_keyboard(message.from_user.id, username)
     
     await message.answer(
         f"🎨 <b>PANEL DE CREADOR RESTAURADO</b>\n\n"
@@ -273,7 +273,7 @@ async def profile_back_to_main(message: Message, state: FSMContext):
     # Resetear navegación al menú principal
     await NavigationManager.reset_to_main(state)
     username = message.from_user.username
-    keyboard = get_main_menu(username)
+    keyboard = get_main_keyboard(message.from_user.id, username)
     
     await message.answer(
         f"🎨 <b>MENÚ PRINCIPAL</b>\n\n"

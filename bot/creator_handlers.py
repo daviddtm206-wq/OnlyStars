@@ -328,7 +328,7 @@ async def cancel_creator_registration(callback: CallbackQuery, state: FSMContext
     from nav_states import NavigationManager, MenuState
     await NavigationManager.reset_to_main(state)
     
-    from keyboards import get_main_menu
+    from keyboards import get_main_keyboard
     await callback.message.edit_text(
         "❌ <b>REGISTRO CANCELADO</b>\n\n"
         "Has cancelado el registro de creador.\n"
@@ -337,7 +337,7 @@ async def cancel_creator_registration(callback: CallbackQuery, state: FSMContext
     # Enviar nuevo mensaje con el menú principal
     await callback.message.answer(
         "🏠 <b>MENÚ PRINCIPAL</b>\n\n¿Qué te gustaría hacer?",
-        reply_markup=get_main_menu(callback.from_user.username)
+        reply_markup=get_main_keyboard(callback.from_user.id, callback.from_user.username)
     )
 
 @router.callback_query(F.data == "payout_stars")
