@@ -8,7 +8,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from aiogram.fsm.context import FSMContext
 from database import get_creator_by_id, is_user_banned, get_user_balance, get_ppv_by_creator
 from nav_states import MenuState, NavigationManager
-from keyboards import get_main_menu, get_creator_menu, get_explore_menu, get_admin_menu, get_creator_onboarding_menu, is_admin_user, get_creator_profile_main_keyboard, get_creator_profile_submenu_keyboard
+from keyboards import get_main_menu, get_main_keyboard, get_creator_menu, get_explore_menu, get_admin_menu, get_creator_onboarding_menu, is_admin_user, get_creator_profile_main_keyboard, get_creator_profile_submenu_keyboard
 
 router = Router()
 
@@ -18,7 +18,7 @@ async def show_menu(state: MenuState, message: Message, context: FSMContext):
     
     if state == MenuState.MAIN:
         text = "🌟 <b>ONLYSTARS - MENÚ PRINCIPAL</b>\n\n¿Qué te gustaría hacer hoy?"
-        keyboard = get_main_menu(username)
+        keyboard = get_main_keyboard(message.from_user.id, username)
         
     elif state == MenuState.CREATOR:
         creator = get_creator_by_id(message.from_user.id)
@@ -357,7 +357,7 @@ async def handle_back_to_main(callback: CallbackQuery, state: FSMContext):
     # Enviar nuevo mensaje con el menú principal (ReplyKeyboardMarkup)
     username = callback.from_user.username
     text = "🌟 <b>ONLYSTARS - MENÚ PRINCIPAL</b>\n\n¿Qué te gustaría hacer hoy?"
-    keyboard = get_main_menu(username)
+    keyboard = get_main_keyboard(callback.from_user.id, username)
     
     await callback.message.answer(text, reply_markup=keyboard)
     await callback.answer()
