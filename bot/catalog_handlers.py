@@ -265,26 +265,48 @@ async def show_complete_catalog(callback: CallbackQuery, creator_id: int, creato
     )
 
 async def send_paid_content_individual(callback: CallbackQuery, paid_content: list, creator_name: str):
-    """Envía cada contenido pagado individualmente con su precio específico"""
+    """Envía cada contenido pagado individualmente con su precio específico usando sendPaidMedia nativo"""
+    # Import error protection - handle ImportError for InputPaidMedia types
     try:
-        # Importar clases de Paid Media (disponibles en Bot API 8.0+)
         from aiogram.types import InputPaidMediaPhoto, InputPaidMediaVideo
+    except ImportError as e:
+        print(f"❌ Error importando tipos de Paid Media: {e}")
+        # Fallback to spoiler method for all content
+        await send_content_album_fallback(callback, paid_content, "🔒 Contenido de pago - InputPaidMedia no disponible")
+        return
+    
+    # Procesar cada contenido por separado con su precio específico
+    for content in paid_content:
+        content_id = content[0]
+        title = content[2] 
+        description = content[3]
+        price_stars = content[4]
+        file_id = content[5]
+        file_type = content[6]
+        album_type = content[8] if len(content) > 8 else 'single'  # Compatibilidad con registros antiguos
         
-        # Enviar cada contenido por separado con su precio específico
-        for content in paid_content:
-            content_id = content[0]
-            title = content[2] 
-            description = content[3]
-            price_stars = content[4]
-            file_id = content[5]
-            file_type = content[6]
-            album_type = content[8] if len(content) > 8 else 'single'  # Compatibilidad con registros antiguos
+        try:
+            paid_media_items = []
             
-            # Si es un álbum, obtener todos los archivos
+            # CRITICAL FIX: Handle albums as unified single messages
             if album_type == 'album':
+                # Obtener todos los archivos del álbum
                 album_items = get_ppv_album_items(content_id)
-                paid_media_items = []
                 
+                if not album_items:
+                    print(f"⚠️ Álbum {content_id} sin elementos - usando fallback")
+                    await send_single_content_fallback(callback, [content], "🔒 Álbum vacío")
+                    continue
+                
+                # Price consistency validation for albums
+                # All album items should use the same unified price from the main content record
+                validated_price = price_stars
+                if validated_price <= 0:
+                    print(f"⚠️ Precio inválido para álbum {content_id}: {validated_price}")
+                    await send_single_content_fallback(callback, [content], "🔒 Precio inválido")
+                    continue
+                
+                # Build paid media items for the entire album
                 for item in album_items:
                     item_file_id = item[2]  # file_id en ppv_album_items
                     item_file_type = item[3]  # file_type en ppv_album_items
@@ -293,48 +315,86 @@ async def send_paid_content_individual(callback: CallbackQuery, paid_content: li
                         paid_media_items.append(InputPaidMediaPhoto(media=item_file_id))
                     elif item_file_type == "video":
                         paid_media_items.append(InputPaidMediaVideo(media=item_file_id))
+                
+                # Send the ENTIRE album as ONE single paid media message with unified price
+                if paid_media_items:
+                    caption = description if description and description.strip() else None
+                    
+                    # Single call to send_paid_media for the entire album
+                    paid_message = await callback.message.bot.send_paid_media(
+                        chat_id=callback.message.chat.id,
+                        star_count=validated_price,
+                        media=paid_media_items,
+                        caption=caption
+                    )
+                    
+                    # Tracking verification - ensure tracking is saved correctly
+                    if not hasattr(callback.message.bot, '_paid_media_tracking'):
+                        callback.message.bot._paid_media_tracking = {}
+                    
+                    tracking_data = {
+                        'content_id': content_id,
+                        'creator_id': content[1],  # creator_id
+                        'buyer_id': callback.from_user.id,
+                        'price_stars': validated_price,
+                        'album_type': album_type,
+                        'timestamp': time.time(),  # CRÍTICO: Timestamp para correlación segura
+                        'album_items_count': len(album_items)  # Para verificación adicional
+                    }
+                    
+                    callback.message.bot._paid_media_tracking[paid_message.message_id] = tracking_data
+                    
+                    # Verify tracking was saved correctly
+                    if paid_message.message_id in callback.message.bot._paid_media_tracking:
+                        print(f"✅ Enviado álbum paid media {content_id}: {validated_price} ⭐️ ({len(album_items)} items)")
+                    else:
+                        print(f"⚠️ Error en tracking para álbum {content_id}")
+                        
             else:
                 # Contenido individual (compatibilidad hacia atrás)
-                paid_media_items = []
                 if file_type == "photo":
                     paid_media_items.append(InputPaidMediaPhoto(media=file_id))
                 elif file_type == "video":
                     paid_media_items.append(InputPaidMediaVideo(media=file_id))
+                
+                # Send individual content as paid media
+                if paid_media_items and price_stars > 0:
+                    caption = description if description and description.strip() else None
+                    
+                    paid_message = await callback.message.bot.send_paid_media(
+                        chat_id=callback.message.chat.id,
+                        star_count=price_stars,
+                        media=paid_media_items,
+                        caption=caption
+                    )
+                    
+                    # Tracking verification for individual content
+                    if not hasattr(callback.message.bot, '_paid_media_tracking'):
+                        callback.message.bot._paid_media_tracking = {}
+                    
+                    tracking_data = {
+                        'content_id': content_id,
+                        'creator_id': content[1],  # creator_id
+                        'buyer_id': callback.from_user.id,
+                        'price_stars': price_stars,
+                        'album_type': album_type,
+                        'timestamp': time.time()  # CRÍTICO: Timestamp para correlación segura
+                    }
+                    
+                    callback.message.bot._paid_media_tracking[paid_message.message_id] = tracking_data
+                    
+                    # Verify tracking was saved correctly
+                    if paid_message.message_id in callback.message.bot._paid_media_tracking:
+                        print(f"✅ Enviado paid media individual {content_id}: {price_stars} ⭐️")
+                    else:
+                        print(f"⚠️ Error en tracking para contenido {content_id}")
+                
+        except Exception as e:
+            # Solo usar fallback para este contenido específico si hay un error real
+            print(f"⚠️ Error enviando paid media para contenido {content_id}: {e}")
             
-            # Enviar como Paid Media individual con solo la descripción del creador (si existe)
-            if paid_media_items and price_stars > 0:
-                caption = description if description and description.strip() else None
-                
-                # Enviar Paid Media y guardar message_id para rastrear compras
-                paid_message = await callback.message.bot.send_paid_media(
-                    chat_id=callback.message.chat.id,
-                    star_count=price_stars,
-                    media=paid_media_items,
-                    caption=caption
-                )
-                
-                # Guardar mapping para procesar compras posteriores
-                # (En un bot real, esto se guardaría en una tabla temporal en DB)
-                # Por simplicidad, lo almacenamos en memoria por ahora
-                if not hasattr(callback.message.bot, '_paid_media_tracking'):
-                    callback.message.bot._paid_media_tracking = {}
-                
-                callback.message.bot._paid_media_tracking[paid_message.message_id] = {
-                    'content_id': content_id,
-                    'creator_id': content[1],  # creator_id
-                    'buyer_id': callback.from_user.id,
-                    'price_stars': price_stars,
-                    'album_type': album_type,
-                    'timestamp': time.time()  # CRÍTICO: Timestamp para correlación segura
-                }
-                
-    except ImportError:
-        # Fallback: Si InputPaidMedia no está disponible, usar mensajes individuales con spoilers
-        await send_content_album_fallback(callback, paid_content, "🔒 Contenido de pago")
-    except Exception as e:
-        # Fallback en caso de error con Paid Media
-        print(f"Error con Paid Media: {e}")
-        await send_content_album_fallback(callback, paid_content, "🔒 Contenido de pago")
+            # Fallback individual para este contenido solamente
+            await send_single_content_fallback(callback, [content], "🔒 Contenido de pago - Error con paid media")
 
 async def send_purchased_content_individual(callback: CallbackQuery, purchased_content: list, caption_prefix: str):
     """Envía cada contenido ya comprado individualmente"""
@@ -393,6 +453,10 @@ async def send_purchased_content_individual(callback: CallbackQuery, purchased_c
     except Exception as e:
         # Fallback a mensajes individuales si falla el envío
         await send_content_album_fallback(callback, purchased_content, caption_prefix)
+
+async def send_single_content_fallback(callback: CallbackQuery, content_list: list, caption_prefix: str):
+    """Fallback para un solo contenido con paid media error"""
+    await send_content_album_fallback(callback, content_list, caption_prefix)
 
 async def send_content_album_fallback(callback: CallbackQuery, content_list: list, caption_prefix: str):
     """Método fallback: envía contenidos como mensajes individuales con spoilers"""
