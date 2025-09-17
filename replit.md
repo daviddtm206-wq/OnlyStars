@@ -38,6 +38,11 @@ This is a Telegram bot that allows creators to sell exclusive content using Tele
 - **September 12, 2025**: Added complete catalog system for creators with /mis_catalogos command
 - **NEW**: Implemented personalized PPV catalogs per creator with professional channel-like interface
 - **NEW**: Added support for FREE subscriptions (0 ⭐️ stars) for creators
+- **September 17, 2025**: ✅ **CRITICAL FIX: Albums in PPV Catalogs**
+  - Fixed album detection bug in catalog display (incorrect field index)
+  - Albums now properly appear in catalogs using sendPaidMedia native integration
+  - Corrected album_type field indexing from content[8] to content[7]
+  - All content types (single photos/videos and albums) now display correctly
 
 ## Project Architecture
 - **Language**: Python 3.11

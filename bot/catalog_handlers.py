@@ -283,7 +283,7 @@ async def send_paid_content_individual(callback: CallbackQuery, paid_content: li
         price_stars = content[4]
         file_id = content[5]
         file_type = content[6]
-        album_type = content[8] if len(content) > 8 else 'single'  # Compatibilidad con registros antiguos
+        album_type = content[7] if len(content) > 7 else 'single'  # Índice corregido para album_type
         
         try:
             paid_media_items = []
@@ -407,7 +407,7 @@ async def send_purchased_content_individual(callback: CallbackQuery, purchased_c
             price_stars = content[4]  # Mostrar el precio original que se pagó
             file_id = content[5]
             file_type = content[6]
-            album_type = content[8] if len(content) > 8 else 'single'  # Compatibilidad con registros antiguos
+            album_type = content[7] if len(content) > 7 else 'single'  # Índice corregido para album_type
             
             caption = description if description and description.strip() else None
             
