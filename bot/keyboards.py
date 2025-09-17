@@ -160,7 +160,7 @@ def get_creator_onboarding_menu() -> ReplyKeyboardMarkup:
 # ==================== FUNCIONES LEGACY (Mantener compatibilidad) ====================
 
 def get_main_keyboard(user_id: int, username: str = None) -> ReplyKeyboardMarkup:
-    """Genera el teclado principal según el rol del usuario"""
+    """Genera el teclado principal simplificado según el rol del usuario"""
     creator = get_creator_by_id(user_id)
     admin_username = os.getenv("ADMIN_USERNAME", "@admin")
     
@@ -171,54 +171,22 @@ def get_main_keyboard(user_id: int, username: str = None) -> ReplyKeyboardMarkup
         user_at = f"@{check_username}" if not check_username.startswith("@") else check_username
         return user_at == admin_username or check_username == admin_username.replace("@", "")
     
-    if creator:
-        # Teclado completo para creadores registrados con organización jerárquica
-        keyboard = [
-            [
-                KeyboardButton(text="👤 Mi Perfil"),
-                KeyboardButton(text="💎 Balance")
-            ],
-            [
-                KeyboardButton(text="📸 Crear PPV"),
-                KeyboardButton(text="📊 Mi Catálogo")
-            ],
-            [
-                KeyboardButton(text="⚙️ Editar Perfil"),
-                KeyboardButton(text="📺 Mis Catálogos")
-            ],
-            [
-                KeyboardButton(text="🔍 Explorar"),
-                KeyboardButton(text="👥 Ver Como Fan")
-            ],
-            [
-                KeyboardButton(text="💰 Enviar Propina"),
-                KeyboardButton(text="ℹ️ Ayuda")
-            ]
+    # Menú simplificado - Mismos botones para todos los usuarios
+    keyboard = [
+        [
+            KeyboardButton(text="👤 Mi Perfil"),
+            KeyboardButton(text="👥 Ver Como Fan")
+        ],
+        [
+            KeyboardButton(text="ℹ️ Ayuda")
         ]
-        
-        # Si es admin, agregar botón de panel admin
-        if is_admin_user(creator[2]):
-            keyboard.insert(-1, [KeyboardButton(text="🛡️ Admin Panel")])
-            
-    else:
-        # Teclado para usuarios/fans
-        keyboard = [
-            [
-                KeyboardButton(text="🔍 Explorar Creadores"),
-                KeyboardButton(text="📺 Mis Catálogos")
-            ],
-            [
-                KeyboardButton(text="🎨 Ser Creador"),
-                KeyboardButton(text="💰 Enviar Propina")
-            ],
-            [
-                KeyboardButton(text="ℹ️ Ayuda")
-            ]
-        ]
-        
-        # Agregar botón de admin si el usuario es administrador (sin necesidad de ser creador)
-        if username and is_admin_user(username):
-            keyboard.insert(-1, [KeyboardButton(text="🛡️ Admin Panel")])
+    ]
+    
+    # Agregar botón de admin si el usuario es administrador
+    if username and is_admin_user(username):
+        keyboard.insert(-1, [KeyboardButton(text="🛡️ Admin Panel")])
+    elif creator and is_admin_user(creator[2]):
+        keyboard.insert(-1, [KeyboardButton(text="🛡️ Admin Panel")])
     
     return ReplyKeyboardMarkup(
         keyboard=keyboard,
