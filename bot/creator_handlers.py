@@ -364,7 +364,25 @@ async def process_payout_method(callback: CallbackQuery, state: FSMContext):
             f"📝 Descripción: {data['description']}\n"
             f"💰 Precio suscripción: {data['subscription_price']} ⭐️\n"
             f"💳 Método de pago: {data['payout_method']}\n\n"
-            f"✅ Ya puedes empezar a ganar dinero. Usa /mi_perfil para gestionar tu cuenta."
+            f"✅ ¡Bienvenido al panel de creador!"
+        )
+        
+        # Mostrar el teclado completo de creador después del registro exitoso
+        from keyboards import get_main_keyboard
+        creator_keyboard = get_main_keyboard(callback.from_user.id, callback.from_user.username)
+        
+        await callback.message.answer(
+            f"🎨 <b>PANEL DE CREADOR ACTIVADO</b>\n\n"
+            f"¡Hola {data['display_name']}! Tu cuenta de creador está lista.\n\n"
+            f"🚀 <b>¿Qué puedes hacer ahora?</b>\n"
+            f"• 👤 Ver y editar tu perfil\n"
+            f"• 📸 Crear contenido PPV premium\n"
+            f"• 💰 Gestionar tus ganancias\n"
+            f"• 📊 Administrar tu catálogo\n"
+            f"• 🔍 Explorar otros creadores\n"
+            f"• 👥 Ver la plataforma como fan\n\n"
+            f"💡 <i>Usa los botones del menú para navegar por todas las opciones.</i>",
+            reply_markup=creator_keyboard
         )
         
     except Exception as e:

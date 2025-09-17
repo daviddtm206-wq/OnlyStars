@@ -172,7 +172,7 @@ def get_main_keyboard(user_id: int, username: str = None) -> ReplyKeyboardMarkup
         return user_at == admin_username or check_username == admin_username.replace("@", "")
     
     if creator:
-        # Teclado para creadores registrados
+        # Teclado completo para creadores registrados con organización jerárquica
         keyboard = [
             [
                 KeyboardButton(text="👤 Mi Perfil"),
@@ -184,11 +184,15 @@ def get_main_keyboard(user_id: int, username: str = None) -> ReplyKeyboardMarkup
             ],
             [
                 KeyboardButton(text="⚙️ Editar Perfil"),
-                KeyboardButton(text="🔍 Explorar")
+                KeyboardButton(text="📺 Mis Catálogos")
             ],
             [
-                KeyboardButton(text="ℹ️ Ayuda"),
+                KeyboardButton(text="🔍 Explorar"),
                 KeyboardButton(text="👥 Ver Como Fan")
+            ],
+            [
+                KeyboardButton(text="💰 Enviar Propina"),
+                KeyboardButton(text="ℹ️ Ayuda")
             ]
         ]
         
