@@ -31,3 +31,4 @@ args = "cd bot && python main.py"
 [deployment]
 deploymentTarget = "vm"
 run = ["python", "bot/main.py"]
+build = ["pip", "install", "-r", "requirements.txt"]
