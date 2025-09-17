@@ -110,27 +110,22 @@ async def handle_ser_creador(message: Message, state: FSMContext):
 
 @router.message(F.text == "🔍 Explorar Creadores")
 async def handle_explorar_creadores(message: Message, state: FSMContext):
-    """Manejar selección de 'Explorar Creadores'"""
+    """Manejar selección de 'Explorar Creadores' - mostrar directamente los creadores"""
     print(f"🚀 DEBUG: Handler 'Explorar Creadores' ejecutado por usuario {message.from_user.id}")
     
     if is_user_banned(message.from_user.id):
         await message.answer("❌ Tu cuenta está baneada y no puedes usar el bot.")
         return
     
-    # Verificar en qué menú estamos
+    # Solo hacer push del estado si no estamos ya en EXPLORE para evitar duplicados
     current_state = await NavigationManager.get_current_state(state)
-    print(f"🚀 DEBUG: Estado actual: {current_state}")
-    
-    if current_state == MenuState.EXPLORE:
-        # Ya estamos en el submenú de explorar, ejecutar la función
-        print(f"🚀 DEBUG: Ya en EXPLORE, ejecutando explore_creators")
-        from creator_handlers import explore_creators
-        await explore_creators(message)
-    else:
-        # Estamos en el menú principal, navegar al submenú de explorar
-        print(f"🚀 DEBUG: Navegando de {current_state} a EXPLORE")
+    if current_state != MenuState.EXPLORE:
         await NavigationManager.push_state(MenuState.EXPLORE, state)
-        await show_menu(MenuState.EXPLORE, message, state)
+    
+    # Siempre ejecutar explore_creators directamente, sin mensajes intermedios
+    print(f"🚀 DEBUG: Ejecutando explore_creators directamente")
+    from creator_handlers import explore_creators
+    await explore_creators(message)
 
 @router.message(F.text == "ℹ️ Ayuda")
 async def handle_ayuda(message: Message, state: FSMContext):
