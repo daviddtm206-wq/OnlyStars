@@ -292,6 +292,5 @@ async def cmd_help(message: Message, state: FSMContext):
     from nav_states import MenuState
     await show_menu(MenuState.HELP, message, state)
 
-# Inicializar base de datos al cargar
-init_db()
+# Database is initialized in main.py
 
