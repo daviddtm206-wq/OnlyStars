@@ -37,7 +37,7 @@ async def cmd_start(message: Message, state: FSMContext):
     
     creator = get_creator_by_id(message.from_user.id)
     username = message.from_user.username
-    keyboard = get_main_menu(username)
+    keyboard = get_main_keyboard(message.from_user.id, username)
     
     if creator:
         welcome_text = (
