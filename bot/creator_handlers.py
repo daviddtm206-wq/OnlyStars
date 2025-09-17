@@ -434,8 +434,18 @@ async def my_profile(message: Message):
     created_at = creator[9]        # created_at
     
     # Obtener número de suscriptores activos de forma segura
-    subscribers_count = get_creator_stats(message.from_user.id)
-    if not isinstance(subscribers_count, int):
+    try:
+        subscribers_count = get_creator_stats(message.from_user.id)
+        print(f"🔍 DEBUG: get_creator_stats devolvió: {subscribers_count} (tipo: {type(subscribers_count)})")
+        
+        # Asegurar que sea un entero
+        if isinstance(subscribers_count, (int, float)):
+            subscribers_count = int(subscribers_count)
+        else:
+            print(f"⚠️ ADVERTENCIA: subscribers_count no es numérico: {subscribers_count}")
+            subscribers_count = 0
+    except Exception as e:
+        print(f"❌ Error obteniendo subscribers_count: {e}")
         subscribers_count = 0
         
     balance_usd = balance_stars * float(os.getenv("EXCHANGE_RATE", 0.013))

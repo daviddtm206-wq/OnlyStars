@@ -204,12 +204,35 @@ def get_all_creators():
     return rows
 
 def get_creator_stats(creator_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM subscribers WHERE creator_id = ? AND expires_at > ?", (creator_id, int(time.time())))
-    subscribers_count = cursor.fetchone()[0]
-    conn.close()
-    return subscribers_count
+    """Obtiene el número de suscriptores activos para un creador"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        current_time = int(time.time())
+        
+        # DEBUG: Verificar que la tabla existe
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='subscribers';")
+        table_exists = cursor.fetchone()
+        print(f"🔍 DEBUG: Tabla subscribers existe: {table_exists is not None}")
+        
+        if table_exists:
+            cursor.execute("SELECT COUNT(*) FROM subscribers WHERE creator_id = ? AND expires_at > ?", (creator_id, current_time))
+            result = cursor.fetchone()
+            print(f"🔍 DEBUG: Resultado de query: {result}")
+            
+            if result and result[0] is not None:
+                count = int(result[0])
+                print(f"🔍 DEBUG: Suscriptores activos para creator {creator_id}: {count}")
+                conn.close()
+                return count
+        
+        conn.close()
+        print(f"🔍 DEBUG: Devolviendo 0 por defecto para creator {creator_id}")
+        return 0
+        
+    except Exception as e:
+        print(f"❌ Error en get_creator_stats: {e}")
+        return 0
 
 def is_user_banned(user_id):
     conn = get_db_connection()
