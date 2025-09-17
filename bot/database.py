@@ -208,29 +208,25 @@ def get_creator_stats(creator_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        current_time = int(time.time())
         
-        # DEBUG: Verificar que la tabla existe
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='subscribers';")
-        table_exists = cursor.fetchone()
-        print(f"🔍 DEBUG: Tabla subscribers existe: {table_exists is not None}")
+        # Usar DATETIME para comparar fechas correctamente
+        cursor.execute("""
+            SELECT COUNT(*) FROM subscribers 
+            WHERE creator_id = ? 
+            AND datetime(expires_at, 'unixepoch') > datetime('now')
+        """, (creator_id,))
         
-        if table_exists:
-            cursor.execute("SELECT COUNT(*) FROM subscribers WHERE creator_id = ? AND expires_at > ?", (creator_id, current_time))
-            result = cursor.fetchone()
-            print(f"🔍 DEBUG: Resultado de query: {result}")
-            
-            if result and result[0] is not None:
-                count = int(result[0])
-                print(f"🔍 DEBUG: Suscriptores activos para creator {creator_id}: {count}")
-                conn.close()
-                return count
-        
+        result = cursor.fetchone()
         conn.close()
-        print(f"🔍 DEBUG: Devolviendo 0 por defecto para creator {creator_id}")
-        return 0
         
+        # Asegurar que devuelve siempre un entero
+        if result and result[0] is not None:
+            return int(result[0])
+        else:
+            return 0
+            
     except Exception as e:
+        # Si hay error, devolver 0 como fallback
         print(f"❌ Error en get_creator_stats: {e}")
         return 0
 

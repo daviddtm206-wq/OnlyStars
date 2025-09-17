@@ -90,12 +90,9 @@ async def keyboard_send_tip(message: Message):
 
 @router.message(F.text == "👤 Mi Perfil")
 async def keyboard_my_profile(message: Message):
-    print(f"🔍 DEBUG: Botón 'Mi Perfil' presionado por usuario {message.from_user.id}")
     from creator_handlers import my_profile
     from keyboards import get_creator_profile_menu
-    print(f"🔍 DEBUG: Llamando a my_profile...")
     await my_profile(message)
-    print(f"🔍 DEBUG: my_profile completado, enviando menú de control...")
     # Cambiar al submenú del perfil
     await message.answer(
         "🎛️ <b>PANEL DE CONTROL</b>\n\n"
