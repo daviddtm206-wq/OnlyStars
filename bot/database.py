@@ -1,6 +1,7 @@
 # bot/database.py
 import sqlite3
 import os
+import time
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "platform.db")
 
