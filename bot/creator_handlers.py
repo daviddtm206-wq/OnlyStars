@@ -4,7 +4,7 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, C
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from database import (add_creator, get_creator_by_id, get_all_creators, get_creator_stats, 
+from database import (add_creator, get_creator_by_id, get_all_creators, get_available_creators, get_creator_stats, 
                      get_user_balance, withdraw_balance, add_ppv_content, is_user_banned,
                      update_creator_display_name, update_creator_description, 
                      update_creator_subscription_price, update_creator_photo,
@@ -398,13 +398,19 @@ async def explore_creators(message: Message):
         await message.answer("❌ Tu cuenta está baneada.")
         return
     
-    creators = get_all_creators()
+    # 🎯 NUEVA LÓGICA: Solo mostrar creadores NO suscritos
+    creators = get_available_creators(message.from_user.id)
     
     if not creators:
-        await message.answer("😔 Aún no hay creadores registrados en la plataforma.")
+        await message.answer(
+            "🎉 <b>¡FELICIDADES!</b>\n\n"
+            "✅ Ya estás suscrito a todos los creadores disponibles\n"
+            "📝 O no hay más creadores registrados en la plataforma.\n\n"
+            "💡 <i>Vuelve más tarde para descubrir nuevos creadores.</i>"
+        )
         return
     
-    # Mostrar el primer creador en formato de tarjeta
+    # Mostrar el primer creador disponible en formato de tarjeta
     await show_creator_card(message, creators, 0)
 
 @router.message(Command("mi_perfil"))
@@ -955,19 +961,21 @@ async def handle_cancel_subscription(callback: CallbackQuery):
 async def handle_next_creator(callback: CallbackQuery):
     """Navega al siguiente creador"""
     current_page = int(callback.data.split("_")[2])
-    creators = get_all_creators()
+    # 🎯 NUEVA LÓGICA: Solo mostrar creadores NO suscritos
+    creators = get_available_creators(callback.from_user.id)
     
     next_page = current_page + 1
     if next_page < len(creators):
         await show_creator_card_callback(callback, creators, next_page)
     else:
-        await callback.answer("❌ No hay más creadores.", show_alert=True)
+        await callback.answer("❌ No hay más creadores disponibles.", show_alert=True)
 
 @router.callback_query(F.data.startswith("creator_prev_"))
 async def handle_prev_creator(callback: CallbackQuery):
     """Navega al creador anterior"""
     current_page = int(callback.data.split("_")[2])
-    creators = get_all_creators()
+    # 🎯 NUEVA LÓGICA: Solo mostrar creadores NO suscritos
+    creators = get_available_creators(callback.from_user.id)
     
     prev_page = current_page - 1
     if prev_page >= 0:
@@ -978,11 +986,16 @@ async def handle_prev_creator(callback: CallbackQuery):
 @router.callback_query(F.data == "back_to_explore")
 async def handle_back_to_explore(callback: CallbackQuery):
     """Regresa a la exploración de creadores"""
-    creators = get_all_creators()
+    # 🎯 NUEVA LÓGICA: Solo mostrar creadores NO suscritos
+    creators = get_available_creators(callback.from_user.id)
     if creators:
         await show_creator_card_callback(callback, creators, 0)
     else:
-        await callback.message.edit_text("😔 No hay creadores disponibles.")
+        await callback.message.edit_text(
+            "🎉 <b>¡EXCELENTE!</b>\n\n"
+            "✅ Ya estás suscrito a todos los creadores disponibles.\n\n"
+            "💡 <i>Vuelve más tarde para descubrir nuevos creadores.</i>"
+        )
 
 async def show_creator_card_callback(callback: CallbackQuery, creators: list, page: int = 0):
     """Muestra una tarjeta de creador en un callback (para navegación)"""

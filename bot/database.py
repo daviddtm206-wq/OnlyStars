@@ -203,6 +203,29 @@ def get_all_creators():
     conn.close()
     return rows
 
+def get_available_creators(user_id):
+    """Obtiene creadores disponibles (no suscritos) para un usuario específico"""
+    import time
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Obtener creadores excluyendo:
+    # 1. Al propio usuario (no verse a sí mismo)
+    # 2. Creadores a los que ya está suscrito activamente
+    cursor.execute('''
+        SELECT * FROM creators 
+        WHERE user_id != ? 
+        AND user_id NOT IN (
+            SELECT creator_id FROM subscribers 
+            WHERE fan_id = ? AND expires_at > ?
+        )
+        ORDER BY created_at DESC
+    ''', (user_id, user_id, int(time.time())))
+    
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
 def get_creator_stats(creator_id):
     """Obtiene el número de suscriptores activos para un creador"""
     try:
