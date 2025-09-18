@@ -29,6 +29,163 @@ class VideocallRequest(StatesGroup):
     selecting_duration = State()
     confirming_payment = State()
 
+# ==================== FUNCIONES PARA BOTONES ====================
+
+async def show_available_creators_for_videocall(message: Message):
+    """Mostrar creadores disponibles para videollamadas (para fans)"""
+    creators = get_all_creators()
+    
+    if not creators:
+        await message.answer(
+            "📭 <b>No hay creadores disponibles</b>\n\n"
+            "No se encontraron creadores con videollamadas activas en este momento.\n"
+            "¡Vuelve pronto para ver las novedades!"
+        )
+        return
+    
+    # Filtrar solo creadores con videollamadas habilitadas
+    available_creators = []
+    for creator in creators:
+        settings = get_videocall_settings(creator[1])  # user_id
+        if settings and settings[5]:  # enabled = True
+            available_creators.append((creator, settings))
+    
+    if not available_creators:
+        await message.answer(
+            "🚫 <b>Sin videollamadas disponibles</b>\n\n"
+            "Ningún creador tiene videollamadas activas en este momento.\n"
+            "💡 <b>Tip:</b> Puedes suscribirte a creadores y recibir notificaciones cuando activen videollamadas."
+        )
+        return
+    
+    text = "🎥 <b>CREADORES CON VIDEOLLAMADAS DISPONIBLES</b>\n\n"
+    text += "Selecciona un creador para ver sus tarifas y solicitar una videollamada:\n\n"
+    
+    keyboard = []
+    for creator, settings in available_creators[:10]:  # Máximo 10
+        creator_name = creator[3]  # artistic_name
+        min_price = min(settings[2], settings[3], settings[4])  # precio mínimo
+        price_text = "GRATIS" if min_price == 0 else f"desde {min_price} ⭐"
+        
+        text += f"🎭 <b>{creator_name}</b> - {price_text}\n"
+        keyboard.append([
+            InlineKeyboardButton(
+                text=f"📞 {creator_name}",
+                callback_data=f"vc_select_creator_{creator[1]}"
+            )
+        ])
+    
+    keyboard.append([InlineKeyboardButton(text="🔙 Volver", callback_data="back_to_main")])
+    
+    await message.answer(
+        text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
+    )
+
+async def show_videocall_config(message: Message):
+    """Mostrar configuración de videollamadas (para creadores - botón teclado)"""
+    user_id = message.from_user.id
+    
+    # Verificar que es creador
+    creator = get_creator_by_id(user_id)
+    if not creator:
+        await message.answer(
+            "❌ Solo los creadores registrados pueden configurar videollamadas.\n"
+            "Usa el botón '🎨 Ser Creador' para registrarte."
+        )
+        return
+    
+    # Obtener configuración actual
+    current_settings = get_videocall_settings(user_id)
+    
+    if current_settings:
+        price_10 = current_settings[2]
+        price_30 = current_settings[3] 
+        price_60 = current_settings[4]
+        enabled = current_settings[5]
+        
+        status = "🟢 Activadas" if enabled else "🔴 Desactivadas"
+        
+        text = f"""🎥 <b>TUS VIDEOLLAMADAS</b>
+
+📊 <b>Estado:</b> {status}
+
+💰 <b>Tarifas actuales:</b>
+• ⏱️ 10 minutos: {price_10} ⭐ {'(GRATIS)' if price_10 == 0 else ''}
+• ⏱️ 30 minutos: {price_30} ⭐ {'(GRATIS)' if price_30 == 0 else ''}
+• ⏱️ 60 minutos: {price_60} ⭐ {'(GRATIS)' if price_60 == 0 else ''}
+
+💡 <b>Tip:</b> Las videollamadas gratuitas son excelentes para promocionarte"""
+    else:
+        text = """🎥 <b>CONFIGURAR VIDEOLLAMADAS</b>
+
+🚀 <b>¡Activa las videollamadas y aumenta tus ingresos!</b>
+
+Con las videollamadas privadas puedes:
+• 💰 Ganar dinero extra con sesiones personalizadas
+• 🤝 Conectar más íntimamente con tus fans
+• 🎯 Ofrecer contenido exclusivo en tiempo real
+• 📈 Aumentar tu popularidad
+
+⭐ <b>Puedes configurar precios desde GRATIS hasta lo que quieras</b>"""
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⚙️ Configurar Precios", callback_data="vc_config_prices")],
+        [InlineKeyboardButton(text="📊 Ver Estadísticas", callback_data="vc_stats"),
+         InlineKeyboardButton(text="🔄 Activar/Desactivar", callback_data="vc_toggle")],
+        [InlineKeyboardButton(text="❓ Ayuda", callback_data="vc_help")]
+    ])
+    
+    await message.answer(text, reply_markup=keyboard)
+
+async def show_videocall_config_inline(callback: CallbackQuery):
+    """Mostrar configuración de videollamadas (para creadores - botón inline)"""
+    user_id = callback.from_user.id
+    
+    # Obtener configuración actual
+    current_settings = get_videocall_settings(user_id)
+    
+    if current_settings:
+        price_10 = current_settings[2]
+        price_30 = current_settings[3] 
+        price_60 = current_settings[4]
+        enabled = current_settings[5]
+        
+        status = "🟢 Activas" if enabled else "🔴 Inactivas"
+        
+        text = f"""🎥 <b>CONFIGURACIÓN DE VIDEOLLAMADAS</b>
+
+📊 <b>Estado:</b> {status}
+
+💰 <b>Tarifas actuales:</b>
+• ⏱️ 10 min: {price_10} ⭐ {'(GRATIS)' if price_10 == 0 else ''}
+• ⏱️ 30 min: {price_30} ⭐ {'(GRATIS)' if price_30 == 0 else ''}
+• ⏱️ 60 min: {price_60} ⭐ {'(GRATIS)' if price_60 == 0 else ''}
+
+💫 <b>Las videollamadas te permiten ganar dinero extra conectando directamente con tus fans</b>"""
+    else:
+        text = """🎥 <b>VIDEOLLAMADAS NO CONFIGURADAS</b>
+
+🚀 <b>¡Activa las videollamadas para ganar más!</b>
+
+💰 <b>Beneficios:</b>
+• Sesiones privadas personalizadas
+• Conexión directa con fans
+• Ingresos adicionales garantizados
+• Control total de tus tarifas
+
+⭐ <b>Configura desde precios GRATIS hasta lo que desees</b>"""
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⚙️ Configurar Precios", callback_data="vc_config_prices")],
+        [InlineKeyboardButton(text="📊 Estadísticas", callback_data="vc_stats"),
+         InlineKeyboardButton(text="🔄 On/Off", callback_data="vc_toggle")],
+        [InlineKeyboardButton(text="🔙 Volver", callback_data="back_to_creator_main")]
+    ])
+    
+    await callback.message.edit_text(text, reply_markup=keyboard)
+    await callback.answer()
+
 @router.message(Command("configurar_videollamadas"))
 async def cmd_configure_videocalls(message: Message, state: FSMContext):
     """Comando para que creadores configuren precios de videollamadas"""
