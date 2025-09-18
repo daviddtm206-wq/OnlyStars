@@ -233,6 +233,52 @@ async def handle_admin_broadcast(message: Message, state: FSMContext):
         "• Úsalo con moderación para evitar spam"
     )
 
+# ==================== HANDLERS DE VIDEOLLAMADAS ====================
+
+@router.message(F.text == "🎥 Videollamadas")
+async def handle_videollamadas_fans(message: Message, state: FSMContext):
+    """Manejar botón 'Videollamadas' para fans"""
+    print(f"🎥 DEBUG: Handler 'Videollamadas' ejecutado por usuario {message.from_user.id}")
+    
+    if is_user_banned(message.from_user.id):
+        await message.answer("❌ Tu cuenta está baneada y no puedes usar videollamadas.")
+        return
+    
+    # Importar y ejecutar la función de solicitud de videollamadas
+    try:
+        from videocall_handlers import show_available_creators_for_videocall
+        await show_available_creators_for_videocall(message)
+    except ImportError:
+        await message.answer("❌ Sistema de videollamadas no disponible temporalmente.")
+    except Exception as e:
+        print(f"❌ Error en videollamadas: {e}")
+        await message.answer("❌ Error al cargar videollamadas. Inténtalo más tarde.")
+
+@router.message(F.text == "🎥 Configurar Videollamadas")
+async def handle_configurar_videollamadas(message: Message, state: FSMContext):
+    """Manejar botón 'Configurar Videollamadas' para creadores"""
+    print(f"⚙️ DEBUG: Handler 'Configurar Videollamadas' ejecutado por usuario {message.from_user.id}")
+    
+    if is_user_banned(message.from_user.id):
+        await message.answer("❌ Tu cuenta está baneada y no puedes configurar videollamadas.")
+        return
+    
+    # Verificar que es un creador
+    creator = get_creator_by_id(message.from_user.id)
+    if not creator:
+        await message.answer("❌ Solo los creadores registrados pueden configurar videollamadas.")
+        return
+    
+    # Importar y ejecutar la función de configuración
+    try:
+        from videocall_handlers import show_videocall_config
+        await show_videocall_config(message)
+    except ImportError:
+        await message.answer("❌ Sistema de videollamadas no disponible temporalmente.")
+    except Exception as e:
+        print(f"❌ Error en configuración de videollamadas: {e}")
+        await message.answer("❌ Error al cargar configuración. Inténtalo más tarde.")
+
 @router.message(F.text == "🔧 Configuración")
 async def handle_admin_config(message: Message, state: FSMContext):
     """Manejar selección de 'Configuración' del admin panel"""
@@ -531,6 +577,27 @@ async def handle_profile_catalog(callback: CallbackQuery, state: FSMContext):
         ])
     )
     await callback.answer()
+
+@router.callback_query(F.data == "profile_videocalls")
+async def handle_profile_videocalls(callback: CallbackQuery, state: FSMContext):
+    """Configurar videollamadas desde el perfil"""
+    if is_user_banned(callback.from_user.id):
+        await callback.answer("❌ Tu cuenta está baneada y no puedes configurar videollamadas.", show_alert=True)
+        return
+    
+    creator = get_creator_by_id(callback.from_user.id)
+    if not creator:
+        await callback.answer("❌ Error: No se encontró tu perfil de creador.", show_alert=True)
+        return
+    
+    try:
+        from videocall_handlers import show_videocall_config_inline
+        await show_videocall_config_inline(callback)
+    except ImportError:
+        await callback.answer("❌ Sistema de videollamadas no disponible temporalmente.", show_alert=True)
+    except Exception as e:
+        print(f"❌ Error en configuración de videollamadas: {e}")
+        await callback.answer("❌ Error al cargar configuración. Inténtalo más tarde.", show_alert=True)
 
 @router.callback_query(F.data == "profile_stats")
 async def handle_profile_stats(callback: CallbackQuery, state: FSMContext):

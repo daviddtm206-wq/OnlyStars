@@ -50,10 +50,11 @@ def get_creator_menu() -> ReplyKeyboardMarkup:
             KeyboardButton(text="📊 Mi Catálogo")
         ],
         [
-            KeyboardButton(text="⚙️ Editar Perfil"),
-            KeyboardButton(text="👥 Ver Como Fan")
+            KeyboardButton(text="🎥 Configurar Videollamadas"),
+            KeyboardButton(text="⚙️ Editar Perfil")
         ],
         [
+            KeyboardButton(text="👥 Ver Como Fan"),
             KeyboardButton(text="⬅️ Volver")
         ]
     ]
@@ -98,6 +99,7 @@ def get_explore_menu() -> ReplyKeyboardMarkup:
             KeyboardButton(text="📺 Mis Catálogos")
         ],
         [
+            KeyboardButton(text="🎥 Videollamadas"),
             KeyboardButton(text="💰 Enviar Propina")
         ],
         [
@@ -431,8 +433,11 @@ def get_creator_profile_submenu_keyboard() -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton(text="📊 Mi Catálogo", callback_data="profile_catalog"),
-            InlineKeyboardButton(text="📈 Estadísticas", callback_data="profile_stats")
+            InlineKeyboardButton(text="🎥 Videollamadas", callback_data="profile_videocalls")
         ],
-        [InlineKeyboardButton(text="🔙 Volver", callback_data="back_to_creator_main")]
+        [
+            InlineKeyboardButton(text="📈 Estadísticas", callback_data="profile_stats"),
+            InlineKeyboardButton(text="🔙 Volver", callback_data="back_to_creator_main")
+        ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
