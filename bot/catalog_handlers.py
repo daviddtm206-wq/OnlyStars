@@ -235,8 +235,8 @@ async def show_complete_catalog(callback: CallbackQuery, creator_id: int, creato
              f"📚 {len(ppv_content)} contenidos exclusivos disponibles"
     )
     
-    # Enviar contenidos en orden cronológico manteniendo el orden original (más reciente primero)
-    for content in ppv_content:
+    # Enviar contenidos en orden inverso para que el más reciente aparezca al final (parte inferior del chat)
+    for content in reversed(ppv_content):
         content_id = content[0]
         if has_purchased_ppv(user_id, content_id):
             # Enviar contenido ya comprado
