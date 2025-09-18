@@ -127,6 +127,25 @@ async def handle_explorar_creadores(message: Message, state: FSMContext):
     from creator_handlers import explore_creators
     await explore_creators(message)
 
+@router.message(F.text == "🎥 Videollamadas")
+async def handle_videollamadas_main(message: Message, state: FSMContext):
+    """Manejar botón 'Videollamadas' del menú principal"""
+    print(f"🎥 DEBUG: Handler 'Videollamadas' desde menú principal ejecutado por usuario {message.from_user.id}")
+    
+    if is_user_banned(message.from_user.id):
+        await message.answer("❌ Tu cuenta está baneada y no puedes usar videollamadas.")
+        return
+    
+    # Importar y ejecutar la función de solicitud de videollamadas
+    try:
+        from videocall_handlers import show_available_creators_for_videocall
+        await show_available_creators_for_videocall(message)
+    except ImportError:
+        await message.answer("❌ Sistema de videollamadas no disponible temporalmente.")
+    except Exception as e:
+        print(f"❌ Error en videollamadas: {e}")
+        await message.answer("❌ Error al cargar videollamadas. Inténtalo más tarde.")
+
 @router.message(F.text == "ℹ️ Ayuda")
 async def handle_ayuda(message: Message, state: FSMContext):
     """Manejar selección de 'Ayuda'"""

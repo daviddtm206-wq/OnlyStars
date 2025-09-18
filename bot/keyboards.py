@@ -24,6 +24,7 @@ def get_main_menu(username: str | None = None) -> ReplyKeyboardMarkup:
             KeyboardButton(text="🔍 Explorar Creadores")
         ],
         [
+            KeyboardButton(text="🎥 Videollamadas"),
             KeyboardButton(text="ℹ️ Ayuda")
         ]
     ]
@@ -99,7 +100,6 @@ def get_explore_menu() -> ReplyKeyboardMarkup:
             KeyboardButton(text="📺 Mis Catálogos")
         ],
         [
-            KeyboardButton(text="🎥 Videollamadas"),
             KeyboardButton(text="💰 Enviar Propina")
         ],
         [
