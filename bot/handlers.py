@@ -12,6 +12,7 @@ from admin_handlers import router as admin_router
 from ppv_handlers import router as ppv_router
 from catalog_handlers import router as catalog_router
 from nav_handlers import router as nav_router
+from videocall_handlers import router as videocall_router
 
 router = Router()
 
@@ -22,6 +23,7 @@ router.include_router(creator_router)
 router.include_router(admin_router)
 router.include_router(ppv_router)
 router.include_router(catalog_router)
+router.include_router(videocall_router)  # Sistema de videollamadas
 
 @router.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):

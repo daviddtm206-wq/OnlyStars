@@ -7,6 +7,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from handlers import router
 from database import init_db
+from videocall_system import videocall_manager
 
 from dotenv import load_dotenv
 import os
@@ -45,7 +46,27 @@ async def main():
         logging.error(f"❌ Database initialization failed: {e}")
         exit(1)
     
-    print(f"🤖 Bot iniciado: @{(await bot.get_me()).username}")
+    # Get bot info first
+    try:
+        bot_info = await bot.get_me()
+    except Exception as e:
+        logging.error(f"❌ Failed to get bot info: {e}")
+        exit(1)
+    
+    # Initialize videocall manager
+    try:
+        success = await videocall_manager.initialize(bot_info.id)
+        if success:
+            logging.info("✅ VideoCall system initialized successfully")
+            print("🎥 Sistema de videollamadas inicializado")
+        else:
+            logging.warning("⚠️ VideoCall system initialization failed")
+            print("⚠️ Sistema de videollamadas no disponible (verifica credenciales)")
+    except Exception as e:
+        logging.error(f"❌ VideoCall system initialization error: {e}")
+        print("⚠️ Sistema de videollamadas no disponible")
+    
+    print(f"🤖 Bot iniciado: @{bot_info.username}")
     print("📊 Base de datos inicializada")
     print("💫 Esperando mensajes...")
     

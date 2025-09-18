@@ -122,11 +122,11 @@ def init_db():
             price_stars INTEGER,
             group_id INTEGER,
             status TEXT DEFAULT 'pending', -- 'pending', 'active', 'completed', 'cancelled'
+            payment_verified BOOLEAN DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             started_at TIMESTAMP,
             ended_at TIMESTAMP,
-            FOREIGN KEY (creator_id) REFERENCES creators(user_id),
-            FOREIGN KEY (fan_id) REFERENCES creators(user_id)
+            FOREIGN KEY (creator_id) REFERENCES creators(user_id)
         )
     ''')
     
@@ -508,17 +508,30 @@ def get_videocall_settings(creator_id):
     conn.close()
     return row
 
-def create_videocall_session(session_id, creator_id, fan_id, duration_minutes, price_stars):
+def create_videocall_session(session_id, creator_id, fan_id, duration_minutes, price_stars, payment_verified=False):
     """Crea una nueva sesión de videollamada"""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO videocall_sessions 
-        (session_id, creator_id, fan_id, duration_minutes, price_stars, status)
-        VALUES (?, ?, ?, ?, ?, 'pending')
-    ''', (session_id, creator_id, fan_id, duration_minutes, price_stars))
+        (session_id, creator_id, fan_id, duration_minutes, price_stars, status, payment_verified)
+        VALUES (?, ?, ?, ?, ?, 'pending', ?)
+    ''', (session_id, creator_id, fan_id, duration_minutes, price_stars, payment_verified))
     conn.commit()
     conn.close()
+
+def verify_videocall_payment(session_id):
+    """Marca el pago de una videollamada como verificado"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE videocall_sessions 
+        SET payment_verified = 1
+        WHERE session_id = ?
+    ''', (session_id,))
+    conn.commit()
+    conn.close()
+    return cursor.rowcount > 0
 
 def get_videocall_session(session_id):
     """Obtiene información de una sesión de videollamada"""
