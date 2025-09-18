@@ -10,7 +10,7 @@ This is a Telegram bot that allows creators to sell exclusive content using Tele
   - ✅ Fixed duplicate dependencies in requirements.txt for clean builds
   - ✅ Set up workflow for continuous Telegram bot operation
   - ✅ Configured VM deployment target for always-on bot functionality
-  - ✅ BOT_TOKEN and other secrets configured in Replit Secrets - Bot fully operational
+  - ⚠️ **SETUP REQUIRED**: Bot token and secrets need to be configured in Replit Secrets
   - **NEW**: ✅ **TRANSFORMACIÓN COMPLETA: Catálogo Profesional Estilo Canal**
     - Eliminados mensajes de encabezado y fin de catálogo no deseados
     - Reescrita función keyboard_my_catalog para mostrar posts individuales reales
@@ -112,9 +112,19 @@ requirements.txt         # Python dependencies
 ✅ Database initialization working (SQLite runtime creation)
 ✅ Workflow configured for continuous bot operation
 ✅ VM deployment configured for always-on functionality
-✅ Core bot functionality tested and working
+✅ Requirements.txt cleaned up (removed duplicates)
 ⚠️ **Setup Required**: Configure BOT_TOKEN and other secrets in Replit Secrets
 ⚠️ **Next Step**: Add BOT_TOKEN from @BotFather to make bot operational
+
+## Required Secrets Configuration
+The following secrets need to be added to Replit Secrets:
+- `BOT_TOKEN` - Get this from @BotFather on Telegram
+- `ADMIN_USERNAME` - Telegram username for platform administrator (e.g. @username)
+- `COMMISSION_PERCENTAGE` - Platform commission rate (recommended: 20)
+- `DEFAULT_CURRENCY` - Currency code (use: XTR for Telegram Stars)
+- `EXCHANGE_RATE` - Exchange rate (recommended: 0.013)
+- `MIN_WITHDRAWAL` - Minimum withdrawal amount (recommended: 1000)
+- `WITHDRAWAL_MODE` - Withdrawal mode (use: REAL)
 
 ## Available Commands
 
