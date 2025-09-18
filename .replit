@@ -26,7 +26,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python bot/main.py"
+args = "cd bot && python main.py"
 
 [deployment]
 deploymentTarget = "vm"
