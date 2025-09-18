@@ -21,7 +21,7 @@ Bot de Telegram que permite a múltiples creadores vender contenido exclusivo us
 3. Pega la URL de este repositorio.  
 4. En “Variables”, agrega:  
    ```
-   BOT_TOKEN = 8411359903:AAG0EkumLen1aRnbnGsgYABhHm4x0b-4dnQ
+   BOT_TOKEN = [Tu token de @BotFather]
    ADMIN_USERNAME = @Daviddtm
    COMMISSION_PERCENTAGE = 20
    DEFAULT_CURRENCY = XTR
