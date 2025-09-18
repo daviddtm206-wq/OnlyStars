@@ -97,6 +97,51 @@ def init_db():
         )
     ''')
     
+    # === VIDEOCALL SYSTEM TABLES ===
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS videocall_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            creator_id INTEGER UNIQUE,
+            price_10min INTEGER DEFAULT 0,
+            price_30min INTEGER DEFAULT 0,
+            price_60min INTEGER DEFAULT 0,
+            enabled BOOLEAN DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (creator_id) REFERENCES creators(user_id) ON DELETE CASCADE
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS videocall_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT UNIQUE,
+            creator_id INTEGER,
+            fan_id INTEGER,
+            duration_minutes INTEGER,
+            price_stars INTEGER,
+            group_id INTEGER,
+            status TEXT DEFAULT 'pending', -- 'pending', 'active', 'completed', 'cancelled'
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            started_at TIMESTAMP,
+            ended_at TIMESTAMP,
+            FOREIGN KEY (creator_id) REFERENCES creators(user_id),
+            FOREIGN KEY (fan_id) REFERENCES creators(user_id)
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS videocall_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER UNIQUE,
+            session_id TEXT,
+            group_title TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            deleted_at TIMESTAMP,
+            FOREIGN KEY (session_id) REFERENCES videocall_sessions(session_id) ON DELETE CASCADE
+        )
+    ''')
+    
     # === MIGRATION LOGIC FOR EXISTING DATABASES ===
     # Add album_type column to ppv_content if it doesn't exist (for databases created before this feature)
     try:
@@ -436,6 +481,118 @@ def get_ppv_content_with_stats(creator_id):
         GROUP BY p.id
         ORDER BY p.created_at DESC
     ''', (creator_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+# === VIDEOCALL SYSTEM FUNCTIONS ===
+
+def set_videocall_settings(creator_id, price_10min, price_30min, price_60min, enabled=True):
+    """Configura los precios de videollamadas para un creador"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT OR REPLACE INTO videocall_settings 
+        (creator_id, price_10min, price_30min, price_60min, enabled, updated_at)
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ''', (creator_id, price_10min, price_30min, price_60min, enabled))
+    conn.commit()
+    conn.close()
+
+def get_videocall_settings(creator_id):
+    """Obtiene la configuración de videollamadas de un creador"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM videocall_settings WHERE creator_id = ?", (creator_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+def create_videocall_session(session_id, creator_id, fan_id, duration_minutes, price_stars):
+    """Crea una nueva sesión de videollamada"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO videocall_sessions 
+        (session_id, creator_id, fan_id, duration_minutes, price_stars, status)
+        VALUES (?, ?, ?, ?, ?, 'pending')
+    ''', (session_id, creator_id, fan_id, duration_minutes, price_stars))
+    conn.commit()
+    conn.close()
+
+def get_videocall_session(session_id):
+    """Obtiene información de una sesión de videollamada"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM videocall_sessions WHERE session_id = ?", (session_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+def update_videocall_session_status(session_id, status, group_id=None):
+    """Actualiza el estado de una sesión de videollamada"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if group_id:
+        cursor.execute('''
+            UPDATE videocall_sessions 
+            SET status = ?, group_id = ?, started_at = CURRENT_TIMESTAMP 
+            WHERE session_id = ?
+        ''', (status, group_id, session_id))
+    else:
+        cursor.execute('''
+            UPDATE videocall_sessions 
+            SET status = ?, ended_at = CURRENT_TIMESTAMP 
+            WHERE session_id = ?
+        ''', (status, session_id))
+    conn.commit()
+    conn.close()
+
+def create_videocall_group(group_id, session_id, group_title):
+    """Registra un grupo de videollamada creado"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO videocall_groups (group_id, session_id, group_title)
+        VALUES (?, ?, ?)
+    ''', (group_id, session_id, group_title))
+    conn.commit()
+    conn.close()
+
+def delete_videocall_group(group_id):
+    """Marca un grupo de videollamada como eliminado"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE videocall_groups 
+        SET deleted_at = CURRENT_TIMESTAMP 
+        WHERE group_id = ?
+    ''', (group_id,))
+    conn.commit()
+    conn.close()
+
+def get_active_videocall_sessions(creator_id=None, fan_id=None):
+    """Obtiene sesiones activas de videollamadas"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if creator_id:
+        cursor.execute('''
+            SELECT * FROM videocall_sessions 
+            WHERE creator_id = ? AND status IN ('pending', 'active')
+            ORDER BY created_at DESC
+        ''', (creator_id,))
+    elif fan_id:
+        cursor.execute('''
+            SELECT * FROM videocall_sessions 
+            WHERE fan_id = ? AND status IN ('pending', 'active')
+            ORDER BY created_at DESC
+        ''', (fan_id,))
+    else:
+        cursor.execute('''
+            SELECT * FROM videocall_sessions 
+            WHERE status IN ('pending', 'active')
+            ORDER BY created_at DESC
+        ''')
     rows = cursor.fetchall()
     conn.close()
     return rows
