@@ -214,8 +214,6 @@ async def show_complete_catalog(callback: CallbackQuery, creator_id: int, creato
     
     if not ppv_content:
         await callback.message.edit_text(
-            f"📺 <b>CATÁLOGO DE {creator_name}</b>\n"
-            f"(Solo para suscriptores)\n\n"
             f"💭 Este creador aún no ha publicado contenido PPV.\n\n"
             f"¡Mantente atento para nuevos contenidos exclusivos!",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
@@ -227,13 +225,7 @@ async def show_complete_catalog(callback: CallbackQuery, creator_id: int, creato
     # Eliminar el mensaje anterior
     await callback.message.delete()
     
-    # Enviar mensaje de encabezado del catálogo
-    await callback.message.bot.send_message(
-        chat_id=callback.message.chat.id,
-        text=f"📺 <b>CATÁLOGO DE {creator_name}</b>\n"
-             f"(Solo para suscriptores)\n\n"
-             f"📚 {len(ppv_content)} contenidos exclusivos disponibles"
-    )
+    # Mensaje de encabezado removido según solicitud del usuario
     
     # Enviar contenidos en orden cronológico (más antiguo primero, más reciente al final)
     # Ordenamiento defensivo por si acaso
@@ -254,15 +246,7 @@ async def show_complete_catalog(callback: CallbackQuery, creator_id: int, creato
         
         print(f"📤 Enviado contenido ID {content_id} como #{position}")  # Debug temporal
     
-    # Mensaje final con botón para volver
-    await callback.message.bot.send_message(
-        chat_id=callback.message.chat.id,
-        text="🔚 <b>Fin del catálogo</b>\n\nUsa los botones de abajo para navegar o explorar más creadores.",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📚 Volver a mis catálogos", callback_data="back_to_catalogs")],
-            [InlineKeyboardButton(text="🔍 Explorar más creadores", callback_data="explore_creators")]
-        ])
-    )
+    # Mensaje final removido - solo mantener botones de navegación al final del último contenido
 
 async def send_paid_content_individual(callback: CallbackQuery, paid_content: list, creator_name: str):
     """Envía cada contenido pagado individualmente con su precio específico usando sendPaidMedia nativo"""
