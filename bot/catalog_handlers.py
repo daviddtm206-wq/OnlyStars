@@ -237,9 +237,9 @@ async def show_complete_catalog(callback: CallbackQuery, creator_id: int, creato
     
     # Enviar contenidos del más antiguo al más reciente para que el más reciente aparezca al final (parte inferior del chat)
     total_content = len(ppv_content)
-    for index, content in enumerate(ppv_content):
+    for index, content in enumerate(reversed(ppv_content)):
         content_id = content[0]
-        position = total_content - index  # Número de posición del más reciente al más antiguo
+        position = index + 1  # Número de posición del más antiguo al más reciente
         
         if has_purchased_ppv(user_id, content_id):
             # Enviar contenido ya comprado con marcador temporal
