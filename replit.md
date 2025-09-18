@@ -4,6 +4,13 @@
 This is a Telegram bot that allows creators to sell exclusive content using Telegram Stars (⭐️). The platform supports monthly subscriptions, pay-per-view content, tips, and includes an admin panel with a 20% platform commission.
 
 ## Recent Changes
+- **September 18, 2025**:
+  - ✅ Fresh GitHub import successfully configured for Replit environment
+  - ✅ Python 3.11 installed with all required dependencies
+  - ✅ Fixed duplicate dependencies in requirements.txt for clean builds
+  - ✅ Set up workflow for continuous Telegram bot operation
+  - ✅ Configured VM deployment target for always-on bot functionality
+  - ⚠️ BOT_TOKEN and other secrets need to be configured in Replit Secrets
 - **September 15, 2025**: 
   - ✅ Fresh clone imported and fully configured for Replit environment
   - ✅ Moved ALL sensitive credentials to secure Replit Secrets (BOT_TOKEN, ADMIN_USERNAME, COMMISSION_PERCENTAGE, DEFAULT_CURRENCY, EXCHANGE_RATE, MIN_WITHDRAWAL, WITHDRAWAL_MODE)
