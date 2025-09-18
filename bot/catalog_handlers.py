@@ -236,14 +236,17 @@ async def show_complete_catalog(callback: CallbackQuery, creator_id: int, creato
     )
     
     # Enviar contenidos en orden inverso para que el más reciente aparezca al final (parte inferior del chat)
-    for content in reversed(ppv_content):
+    total_content = len(ppv_content)
+    for index, content in enumerate(reversed(ppv_content)):
         content_id = content[0]
+        position = total_content - index  # Número de posición del más reciente al más antiguo
+        
         if has_purchased_ppv(user_id, content_id):
-            # Enviar contenido ya comprado
-            await send_purchased_content_individual(callback, [content], "✅ Contenido ya comprado")
+            # Enviar contenido ya comprado con marcador temporal
+            await send_purchased_content_individual(callback, [content], f"✅ #{position} Contenido ya comprado")
         else:
-            # Enviar contenido pagado
-            await send_paid_content_individual(callback, [content], creator_name)
+            # Enviar contenido pagado con marcador temporal
+            await send_paid_content_individual(callback, [content], f"#{position} - {creator_name}")
     
     # Mensaje final con botón para volver
     await callback.message.bot.send_message(
