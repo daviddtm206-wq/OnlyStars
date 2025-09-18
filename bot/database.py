@@ -375,13 +375,13 @@ def get_active_subscriptions(user_id):
     return rows
 
 def get_ppv_by_creator(creator_id):
-    """Obtiene todo el contenido PPV de un creador específico ordenado del más reciente al más antiguo"""
+    """Obtiene todo el contenido PPV de un creador específico ordenado del más antiguo al más reciente"""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         SELECT * FROM ppv_content 
         WHERE creator_id = ?
-        ORDER BY id DESC, created_at DESC
+        ORDER BY created_at ASC, id ASC
     ''', (creator_id,))
     rows = cursor.fetchall()
     conn.close()

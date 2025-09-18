@@ -235,24 +235,24 @@ async def show_complete_catalog(callback: CallbackQuery, creator_id: int, creato
              f"📚 {len(ppv_content)} contenidos exclusivos disponibles"
     )
     
-    # Enviar contenidos del más antiguo al más reciente para que el más reciente aparezca al final (parte inferior del chat)
-    import asyncio
+    # Enviar contenidos en orden cronológico (más antiguo primero, más reciente al final)
+    # Ordenamiento defensivo por si acaso
+    ppv_content = sorted(ppv_content, key=lambda r: r[0])  # Ordenar por ID ascendente
     
-    total_content = len(ppv_content)
-    for index, content in enumerate(reversed(ppv_content)):
+    print(f"🔍 Orden de envío: {[content[0] for content in ppv_content]}")  # Debug temporal
+    
+    for index, content in enumerate(ppv_content):
         content_id = content[0]
         position = index + 1  # Número de posición del más antiguo al más reciente
         
         if has_purchased_ppv(user_id, content_id):
-            # Enviar contenido ya comprado con marcador temporal
+            # Enviar contenido ya comprado
             await send_purchased_content_individual(callback, [content], f"✅ #{position} Contenido ya comprado")
         else:
-            # Enviar contenido pagado con marcador temporal
+            # Enviar contenido pagado
             await send_paid_content_individual(callback, [content], f"#{position} - {creator_name}")
         
-        # Delay para garantizar orden correcto según API de Telegram
-        if index < total_content - 1:  # No delay después del último mensaje
-            await asyncio.sleep(0.5)  # 500ms delay entre mensajes
+        print(f"📤 Enviado contenido ID {content_id} como #{position}")  # Debug temporal
     
     # Mensaje final con botón para volver
     await callback.message.bot.send_message(
