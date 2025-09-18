@@ -235,9 +235,9 @@ async def show_complete_catalog(callback: CallbackQuery, creator_id: int, creato
              f"📚 {len(ppv_content)} contenidos exclusivos disponibles"
     )
     
-    # Enviar contenidos en orden inverso para que el más reciente aparezca al final (parte inferior del chat)
+    # Enviar contenidos del más antiguo al más reciente para que el más reciente aparezca al final (parte inferior del chat)
     total_content = len(ppv_content)
-    for index, content in enumerate(reversed(ppv_content)):
+    for index, content in enumerate(ppv_content):
         content_id = content[0]
         position = total_content - index  # Número de posición del más reciente al más antiguo
         
