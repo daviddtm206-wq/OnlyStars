@@ -1,6 +1,6 @@
 # bot/handlers.py
 from aiogram import Router, F, Bot
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from database import init_db, get_creator_by_id, is_user_banned
@@ -125,13 +125,16 @@ async def keyboard_my_catalog(message: Message):
         )
         return
     
-    # Mostrar catálogo personal del creador
-    from database import get_ppv_by_creator
+    # Obtener contenido PPV del creador
+    from database import get_ppv_by_creator, get_ppv_album_items
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    from aiogram.utils.media_group import MediaGroupBuilder
+    
     content_list = get_ppv_by_creator(message.from_user.id)
     
     if not content_list:
-        catalog_text = (
-            f"📊 <b>MI CATÁLOGO</b>\n\n"
+        await message.answer(
+            f"📊 <b>MI CATÁLOGO PROFESIONAL</b>\n\n"
             f"📭 <b>No tienes contenido PPV aún</b>\n\n"
             f"💡 <b>¡Empieza a crear!</b>\n"
             f"Usa '📸 Crear PPV' para subir tu primer contenido y comenzar a ganar dinero.\n\n"
@@ -140,18 +143,221 @@ async def keyboard_my_catalog(message: Message):
             f"• Videos premium\n"
             f"• Álbumes temáticos"
         )
-    else:
-        catalog_text = f"📊 <b>MI CATÁLOGO</b>\n\n📈 <b>Total de contenido:</b> {len(content_list)} elementos\n\n"
-        
-        for i, content in enumerate(content_list[:5], 1):  # Mostrar máximo 5
-            catalog_text += f"🎯 <b>{i}.</b> {content[3]} - {content[4]} ⭐️\n"
-        
-        if len(content_list) > 5:
-            catalog_text += f"\n... y {len(content_list) - 5} más\n"
-        
-        catalog_text += f"\n💡 <i>Usa '📸 Crear PPV' para agregar más contenido</i>"
+        return
     
-    await message.answer(catalog_text)
+    # Mensaje de encabezado profesional
+    total_content = len(content_list)
+    total_earnings = sum(content[4] for content in content_list)  # Suma de precios como estimado
+    
+    header_text = (
+        f"📊 <b>MI CATÁLOGO PROFESIONAL</b>\n\n"
+        f"📈 <b>Total de contenido:</b> {total_content} publicaciones\n"
+        f"💰 <b>Valor del catálogo:</b> {total_earnings} ⭐️\n"
+        f"👤 <b>Creador:</b> {creator[3]}\n\n"
+        f"📱 <b>Vista como canal profesional:</b>"
+    )
+    
+    await message.answer(header_text)
+    
+    # Mostrar cada contenido como post individual
+    for index, content in enumerate(content_list, 1):
+        content_id = content[0]
+        creator_id = content[1]
+        title = content[2]
+        description = content[3]
+        price_stars = content[4]
+        file_id = content[5]
+        file_type = content[6]
+        album_type = content[7] if len(content) > 7 else 'single'
+        
+        # Construir caption profesional
+        caption_text = f"📸 <b>Post #{index}</b>\n"
+        if title and title.strip():
+            caption_text += f"📝 <b>Título:</b> {title}\n"
+        if description and description.strip():
+            caption_text += f"💭 <b>Descripción:</b> {description}\n"
+        caption_text += f"💰 <b>Precio:</b> {price_stars} ⭐️\n"
+        caption_text += f"📊 <b>Tipo:</b> {'🎬 Álbum' if album_type == 'album' else '📷 Individual'}"
+        
+        # Botones de gestión profesional
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✏️ Editar", callback_data=f"edit_content_{content_id}"),
+                InlineKeyboardButton(text="📈 Estadísticas", callback_data=f"stats_content_{content_id}")
+            ],
+            [
+                InlineKeyboardButton(text="🗑️ Eliminar", callback_data=f"delete_content_{content_id}"),
+                InlineKeyboardButton(text="💰 Cambiar Precio", callback_data=f"price_content_{content_id}")
+            ]
+        ])
+        
+        try:
+            if album_type == 'album':
+                # Mostrar álbum completo
+                album_items = get_ppv_album_items(content_id)
+                if album_items:
+                    media_group = MediaGroupBuilder(caption=caption_text)
+                    for item in album_items:
+                        item_file_id = item[2]  # file_id en ppv_album_items
+                        item_file_type = item[3]  # file_type en ppv_album_items
+                        
+                        if item_file_type == "photo":
+                            media_group.add_photo(media=item_file_id)
+                        elif item_file_type == "video":
+                            media_group.add_video(media=item_file_id)
+                    
+                    await message.bot.send_media_group(
+                        chat_id=message.chat.id,
+                        media=media_group.build()
+                    )
+                    
+                    # Enviar botones por separado para álbumes
+                    await message.bot.send_message(
+                        chat_id=message.chat.id,
+                        text="🎬 <b>Gestionar este álbum:</b>",
+                        reply_markup=keyboard
+                    )
+                else:
+                    # Fallback si no hay elementos del álbum
+                    await message.answer(
+                        f"🎬 <b>Álbum #{index} (Vacío)</b>\n\n{caption_text}",
+                        reply_markup=keyboard
+                    )
+            else:
+                # Contenido individual
+                if file_type == "photo":
+                    await message.bot.send_photo(
+                        chat_id=message.chat.id,
+                        photo=file_id,
+                        caption=caption_text,
+                        reply_markup=keyboard
+                    )
+                elif file_type == "video":
+                    await message.bot.send_video(
+                        chat_id=message.chat.id,
+                        video=file_id,
+                        caption=caption_text,
+                        reply_markup=keyboard
+                    )
+                else:
+                    # Fallback para tipos no soportados
+                    await message.answer(
+                        f"📄 <b>Contenido #{index}</b>\n\n{caption_text}",
+                        reply_markup=keyboard
+                    )
+        
+        except Exception as e:
+            print(f"Error enviando contenido {content_id}: {e}")
+            # Fallback: enviar como mensaje de texto
+            await message.answer(
+                f"📱 <b>Contenido #{index}</b>\n\n{caption_text}\n\n⚠️ Error al mostrar media",
+                reply_markup=keyboard
+            )
+    
+    # Mensaje final profesional
+    await message.answer(
+        f"✨ <b>Fin del catálogo</b>\n\n"
+        f"📊 Se mostraron {total_content} contenidos\n"
+        f"💡 Usa los botones en cada post para gestionar tu contenido"
+    )
+
+# Handlers para los botones de gestión de contenido del catálogo profesional
+
+@router.callback_query(F.data.startswith("edit_content_"))
+async def edit_content_callback(callback: CallbackQuery):
+    await callback.answer()
+    content_id = int(callback.data.split("_")[2])
+    await callback.message.answer(
+        f"✏️ <b>Editar Contenido #{content_id}</b>\n\n"
+        f"Esta función estará disponible pronto.\n"
+        f"Permitirá editar título, descripción y otros detalles del contenido."
+    )
+
+@router.callback_query(F.data.startswith("stats_content_"))
+async def stats_content_callback(callback: CallbackQuery):
+    await callback.answer()
+    content_id = int(callback.data.split("_")[2])
+    
+    # Obtener estadísticas básicas del contenido
+    from database import get_ppv_content, has_purchased_ppv
+    content = get_ppv_content(content_id)
+    
+    if content:
+        title = content[2] if content[2] else "Sin título"
+        price = content[4]
+        
+        stats_text = (
+            f"📈 <b>Estadísticas - Contenido #{content_id}</b>\n\n"
+            f"📝 <b>Título:</b> {title}\n"
+            f"💰 <b>Precio:</b> {price} ⭐️\n"
+            f"📊 <b>Tipo:</b> {'🎬 Álbum' if content[7] == 'album' else '📷 Individual'}\n\n"
+            f"💡 <i>Estadísticas detalladas próximamente</i>"
+        )
+    else:
+        stats_text = "❌ No se pudo obtener la información del contenido."
+    
+    await callback.message.answer(stats_text)
+
+@router.callback_query(F.data.startswith("delete_content_"))
+async def delete_content_callback(callback: CallbackQuery):
+    await callback.answer()
+    content_id = int(callback.data.split("_")[2])
+    
+    # Crear confirmación de eliminación
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Confirmar Eliminación", callback_data=f"confirm_delete_{content_id}"),
+            InlineKeyboardButton(text="❌ Cancelar", callback_data="cancel_delete")
+        ]
+    ])
+    
+    await callback.message.answer(
+        f"🗑️ <b>Confirmar Eliminación</b>\n\n"
+        f"¿Estás seguro de que quieres eliminar este contenido?\n\n"
+        f"⚠️ <b>Esta acción no se puede deshacer</b>\n"
+        f"• Se eliminará el contenido permanentemente\n"
+        f"• Los usuarios que lo compraron perderán el acceso",
+        reply_markup=keyboard
+    )
+
+@router.callback_query(F.data.startswith("confirm_delete_"))
+async def confirm_delete_callback(callback: CallbackQuery):
+    await callback.answer()
+    content_id = int(callback.data.split("_")[2])
+    
+    from database import delete_ppv_content
+    success, message_text = delete_ppv_content(content_id, callback.from_user.id)
+    
+    if success:
+        await callback.message.edit_text(
+            f"✅ <b>Contenido Eliminado</b>\n\n"
+            f"El contenido #{content_id} ha sido eliminado exitosamente.\n"
+            f"Usa '📊 Mi Catálogo' para ver tu catálogo actualizado."
+        )
+    else:
+        await callback.message.edit_text(
+            f"❌ <b>Error al Eliminar</b>\n\n"
+            f"{message_text}"
+        )
+
+@router.callback_query(F.data == "cancel_delete")
+async def cancel_delete_callback(callback: CallbackQuery):
+    await callback.answer()
+    await callback.message.edit_text(
+        "❌ <b>Eliminación Cancelada</b>\n\n"
+        "El contenido no ha sido eliminado."
+    )
+
+@router.callback_query(F.data.startswith("price_content_"))
+async def price_content_callback(callback: CallbackQuery):
+    await callback.answer()
+    content_id = int(callback.data.split("_")[2])
+    await callback.message.answer(
+        f"💰 <b>Cambiar Precio - Contenido #{content_id}</b>\n\n"
+        f"Esta función estará disponible pronto.\n"
+        f"Permitirá modificar el precio del contenido fácilmente."
+    )
 
 @router.message(F.text == "⚙️ Editar Perfil")
 async def keyboard_edit_profile(message: Message):
