@@ -235,24 +235,15 @@ async def show_complete_catalog(callback: CallbackQuery, creator_id: int, creato
              f"📚 {len(ppv_content)} contenidos exclusivos disponibles"
     )
     
-    # Separar contenidos en grupos pagados y ya comprados
-    paid_content = []
-    purchased_content = []
-    
+    # Enviar contenidos en orden cronológico manteniendo el orden original (más reciente primero)
     for content in ppv_content:
         content_id = content[0]
         if has_purchased_ppv(user_id, content_id):
-            purchased_content.append(content)
+            # Enviar contenido ya comprado
+            await send_purchased_content_individual(callback, [content], "✅ Contenido ya comprado")
         else:
-            paid_content.append(content)
-    
-    # Enviar contenidos ya comprados individualmente
-    if purchased_content:
-        await send_purchased_content_individual(callback, purchased_content, "✅ Contenido ya comprado")
-    
-    # Enviar contenidos pagados individualmente con precios específicos
-    if paid_content:
-        await send_paid_content_individual(callback, paid_content, creator_name)
+            # Enviar contenido pagado
+            await send_paid_content_individual(callback, [content], creator_name)
     
     # Mensaje final con botón para volver
     await callback.message.bot.send_message(
