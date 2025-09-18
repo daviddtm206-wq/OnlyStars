@@ -179,16 +179,9 @@ async def keyboard_my_catalog(message: Message):
         caption_text += f"💰 <b>Precio:</b> {price_stars} ⭐️\n"
         caption_text += f"📊 <b>Tipo:</b> {'🎬 Álbum' if album_type == 'album' else '📷 Individual'}"
         
-        # Botones de gestión profesional
+        # Botón de gestión: solo eliminar
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(text="✏️ Editar", callback_data=f"edit_content_{content_id}"),
-                InlineKeyboardButton(text="📈 Estadísticas", callback_data=f"stats_content_{content_id}")
-            ],
-            [
-                InlineKeyboardButton(text="🗑️ Eliminar", callback_data=f"delete_content_{content_id}"),
-                InlineKeyboardButton(text="💰 Cambiar Precio", callback_data=f"price_content_{content_id}")
-            ]
+            [InlineKeyboardButton(text="🗑️ Eliminar", callback_data=f"delete_content_{content_id}")]
         ])
         
         try:
@@ -261,42 +254,7 @@ async def keyboard_my_catalog(message: Message):
         f"💡 Usa los botones en cada post para gestionar tu contenido"
     )
 
-# Handlers para los botones de gestión de contenido del catálogo profesional
-
-@router.callback_query(F.data.startswith("edit_content_"))
-async def edit_content_callback(callback: CallbackQuery):
-    await callback.answer()
-    content_id = int(callback.data.split("_")[2])
-    await callback.message.answer(
-        f"✏️ <b>Editar Contenido #{content_id}</b>\n\n"
-        f"Esta función estará disponible pronto.\n"
-        f"Permitirá editar título, descripción y otros detalles del contenido."
-    )
-
-@router.callback_query(F.data.startswith("stats_content_"))
-async def stats_content_callback(callback: CallbackQuery):
-    await callback.answer()
-    content_id = int(callback.data.split("_")[2])
-    
-    # Obtener estadísticas básicas del contenido
-    from database import get_ppv_content, has_purchased_ppv
-    content = get_ppv_content(content_id)
-    
-    if content:
-        title = content[2] if content[2] else "Sin título"
-        price = content[4]
-        
-        stats_text = (
-            f"📈 <b>Estadísticas - Contenido #{content_id}</b>\n\n"
-            f"📝 <b>Título:</b> {title}\n"
-            f"💰 <b>Precio:</b> {price} ⭐️\n"
-            f"📊 <b>Tipo:</b> {'🎬 Álbum' if content[7] == 'album' else '📷 Individual'}\n\n"
-            f"💡 <i>Estadísticas detalladas próximamente</i>"
-        )
-    else:
-        stats_text = "❌ No se pudo obtener la información del contenido."
-    
-    await callback.message.answer(stats_text)
+# Handlers para el botón de gestión de contenido del catálogo profesional
 
 @router.callback_query(F.data.startswith("delete_content_"))
 async def delete_content_callback(callback: CallbackQuery):
@@ -349,15 +307,6 @@ async def cancel_delete_callback(callback: CallbackQuery):
         "El contenido no ha sido eliminado."
     )
 
-@router.callback_query(F.data.startswith("price_content_"))
-async def price_content_callback(callback: CallbackQuery):
-    await callback.answer()
-    content_id = int(callback.data.split("_")[2])
-    await callback.message.answer(
-        f"💰 <b>Cambiar Precio - Contenido #{content_id}</b>\n\n"
-        f"Esta función estará disponible pronto.\n"
-        f"Permitirá modificar el precio del contenido fácilmente."
-    )
 
 @router.message(F.text == "⚙️ Editar Perfil")
 async def keyboard_edit_profile(message: Message):
