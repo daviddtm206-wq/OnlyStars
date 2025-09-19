@@ -2,3 +2,7 @@ aiogram==3.12.0
 python-dotenv==1.0.1
 pyrogram==2.0.106
 tgcrypto==1.2.5
+aiogram==3.12.0
+pyrogram==2.0.106
+python-dotenv==1.0.1
+tgcrypto==1.2.5
