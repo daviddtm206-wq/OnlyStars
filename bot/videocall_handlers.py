@@ -186,52 +186,6 @@ async def show_videocall_config_inline(callback: CallbackQuery):
     await callback.message.edit_text(text, reply_markup=keyboard)
     await callback.answer()
 
-@router.message(Command("configurar_videollamadas"))
-async def cmd_configure_videocalls(message: Message, state: FSMContext):
-    """Comando para que creadores configuren precios de videollamadas"""
-    user_id = message.from_user.id
-    
-    # Verificar que es creador
-    creator = get_creator_by_id(user_id)
-    if not creator:
-        await message.reply(
-            "❌ Solo los creadores pueden configurar videollamadas.\n"
-            "Usa /convertirme_en_creador para registrarte."
-        )
-        return
-    
-    # Obtener configuración actual
-    current_settings = get_videocall_settings(user_id)
-    
-    if current_settings:
-        price_10 = current_settings[2]  # price_10min
-        price_30 = current_settings[3]  # price_30min 
-        price_60 = current_settings[4]  # price_60min
-        enabled = current_settings[5]  # enabled
-        
-        status = "✅ Activadas" if enabled else "❌ Desactivadas"
-        
-        text = f"""🎥 <b>Configuración de Videollamadas</b>
-
-<b>Estado actual:</b> {status}
-
-<b>Precios configurados:</b>
-• 10 minutos: {price_10} ⭐ {'(GRATIS)' if price_10 == 0 else ''}
-• 30 minutos: {price_30} ⭐ {'(GRATIS)' if price_30 == 0 else ''}
-• 60 minutos: {price_60} ⭐ {'(GRATIS)' if price_60 == 0 else ''}"""
-    else:
-        text = """🎥 <b>Configuración de Videollamadas</b>
-
-No tienes videollamadas configuradas aún.
-¡Configura tus precios y comienza a ofrecer videollamadas privadas!"""
-    
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⚙️ Configurar Precios", callback_data="vc_config_prices")],
-        [InlineKeyboardButton(text="📊 Ver Estadísticas", callback_data="vc_stats")],
-        [InlineKeyboardButton(text="🔄 Estado On/Off", callback_data="vc_toggle")]
-    ])
-    
-    await message.reply(text, reply_markup=keyboard)
 
 @router.callback_query(F.data == "vc_config_prices")
 async def configure_videocall_prices(callback: CallbackQuery, state: FSMContext):
@@ -343,54 +297,6 @@ Los fans podrán solicitar videollamadas contigo usando /solicitar_videollamada.
     except ValueError:
         await message.reply("❌ Por favor ingresa solo números. Ejemplo: 500")
 
-@router.message(Command("solicitar_videollamada"))
-async def cmd_request_videocall(message: Message, state: FSMContext):
-    """Comando para fans para solicitar videollamada"""
-    user_id = message.from_user.id
-    
-    # Obtener creadores con videollamadas habilitadas
-    all_creators = get_all_creators()
-    creators_with_videocalls = []
-    
-    for creator in all_creators:
-        if creator[1] != user_id:  # No mostrarse a sí mismo
-            settings = get_videocall_settings(creator[1])
-            if settings and settings[5]:  # enabled = True
-                creators_with_videocalls.append((creator, settings))
-    
-    if not creators_with_videocalls:
-        await message.reply(
-            "❌ No hay creadores con videollamadas disponibles en este momento.\n\n"
-            "Los creadores pueden activar videollamadas con /configurar_videollamadas"
-        )
-        return
-    
-    # Crear keyboard con creadores disponibles
-    keyboard_buttons = []
-    text = "🎥 <b>Creadores con Videollamadas Disponibles</b>\n\n"
-    
-    for i, (creator, settings) in enumerate(creators_with_videocalls):
-        creator_name = creator[3] or creator[2] or "Sin nombre"  # display_name, username
-        
-        # Mostrar precios
-        price_10 = "GRATIS" if settings[2] == 0 else f"{settings[2]} ⭐"
-        price_30 = "GRATIS" if settings[3] == 0 else f"{settings[3]} ⭐"
-        price_60 = "GRATIS" if settings[4] == 0 else f"{settings[4]} ⭐"
-        
-        text += f"👤 <b>{creator_name}</b>\n"
-        text += f"• 10 min: {price_10}\n"
-        text += f"• 30 min: {price_30}\n"
-        text += f"• 60 min: {price_60}\n\n"
-        
-        keyboard_buttons.append([
-            InlineKeyboardButton(
-                text=f"📞 {creator_name}",
-                callback_data=f"vc_select_creator:{creator[1]}"
-            )
-        ])
-    
-    keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
-    await message.reply(text, reply_markup=keyboard)
 
 @router.callback_query(F.data.startswith("vc_select_creator:"))
 async def select_creator_for_videocall(callback: CallbackQuery, state: FSMContext):

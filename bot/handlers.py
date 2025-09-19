@@ -89,6 +89,18 @@ async def keyboard_send_tip(message: Message):
         "💡 Puedes encontrar el ID de los creadores en 🔍 Explorar Creadores"
     )
 
+@router.message(F.text == "🎥 Videollamadas")
+async def keyboard_videocalls_fan(message: Message):
+    """Handler para botón de videollamadas para fans"""
+    from videocall_handlers import show_available_creators_for_videocall
+    await show_available_creators_for_videocall(message)
+
+@router.message(F.text == "🎥 Configurar Videollamadas")
+async def keyboard_videocall_config(message: Message):
+    """Handler para botón de configuración de videollamadas para creadores"""
+    from videocall_handlers import show_videocall_config
+    await show_videocall_config(message)
+
 
 @router.message(F.text == "👤 Mi Perfil")
 async def keyboard_my_profile(message: Message):
