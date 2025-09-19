@@ -71,7 +71,7 @@ async def show_available_creators_for_videocall(message: Message):
         keyboard.append([
             InlineKeyboardButton(
                 text=f"📞 {creator_name}",
-                callback_data=f"vc_select_creator_{creator[1]}"
+                callback_data=f"vc_select_creator:{creator[1]}"
             )
         ])
     
@@ -287,7 +287,7 @@ async def set_price_60min(message: Message, state: FSMContext):
 • 60 minutos: {price_60_text}
 
 ¡Las videollamadas están ahora <b>ACTIVADAS</b> en tu perfil!
-Los fans podrán solicitar videollamadas contigo usando /solicitar_videollamada.""",
+Los fans podrán solicitar videollamadas contigo desde el botón '🎥 Videollamadas' del menú principal.""",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="🎥 Ver Mi Configuración", callback_data="vc_my_config")]
             ])
